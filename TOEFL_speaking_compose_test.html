@@ -721,8 +721,15 @@ function playAudio(btn, src){
 /* ================= 音声認識・録音（解答欄は prefix で使い回す） ================= */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const ASR_OK = !!SR;
+/* 端末判定。iOS Safari は「認識と録音でマイクを取り合う」「continuous が続かない」「
+   await をはさむとユーザー操作の文脈が切れて start() が弾かれる」の3点で挙動が違う */
+const IS_IOS    = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                  (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+const IS_SAFARI = /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS|Edg/.test(navigator.userAgent);
+const IS_FILE   = location.protocol==='file:';   // file:// ではブラウザが音声認識を許可しない
 let asrPrefix='cy';
 let recog=null, recording=false, asrFinal='', mediaRec=null, chunksBlob=[], recURL=null;
+let asrStopping=false, asrRestart=0, asrLastWrite='';
 function asrEl(suffix){ return document.getElementById(asrPrefix+suffix); }
 /* 解答欄（🎤ボタン＋認識結果＋テキストエリア＋採点ボタン）を作る。prefix は画面ごとに変える */
 function answerInputHtml(prefix, rows, placeholder, submitCall, submitLabel){
@@ -741,51 +748,108 @@ function setAsrBox(txt, off){
   el.classList.toggle('off', !!off);
 }
 function toggleRec(){ recording ? stopRec() : startRec(); }
-async function startRec(){
-  asrFinal='';
+const ASR_MSG = {
+  'not-allowed'        : 'マイクの使用が許可されていません。Safariのアドレスバー左の「ぁあ」→「Webサイトの設定」でマイクを「許可」にしてから、もう一度 🎤 を押してください。',
+  'service-not-allowed': '端末の設定で音声認識がオフになっています。iPhoneは 設定 → 一般 → キーボード → 「音声入力」をオンにしてください。',
+  'audio-capture'      : 'マイクが見つかりませんでした。ほかのアプリがマイクを使っていないか確認してください。',
+  'network'            : '音声認識サーバーに接続できませんでした。通信環境を確認してください。'
+};
+/* 🎤 を押した瞬間に呼ばれる。ここで await をはさむと iOS Safari が
+   「ユーザー操作から始まっていない」と見なして start() を弾くので、
+   認識の開始だけは必ず同期的に先へ出す（録音はそのあと） */
+function startRec(){
+  asrFinal=''; asrLastWrite=''; asrStopping=false; asrRestart=0;
   const btn=asrEl('-rec-btn');
   if(btn){ btn.textContent='⏹ 話し終わった（停止）'; }
   recording=true;
+
+  if(IS_FILE){
+    finishRecUi('ファイルを直接開いた状態（file://）では、ブラウザが音声認識を許可しません。'+
+                '公開URL（https://…）から開くか、下の欄にタイプしてください。', true);
+    return;
+  }
+  if(!ASR_OK){
+    setAsrBox('この端末では音声認識が使えません。録音だけ行います。下の欄にタイプしてください。', true);
+    startTape(); return;
+  }
+  if(!startAsr()) return;
+  /* iOS Safari は認識と録音でマイクを取り合って認識が落ちるので、録音は載せない */
+  if(!(IS_IOS && IS_SAFARI)) startTape();
+}
+function startAsr(){
   try{
-    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-      chunksBlob=[]; mediaRec=new MediaRecorder(stream);
-      mediaRec.ondataavailable=e=>{ if(e.data.size) chunksBlob.push(e.data); };
-      mediaRec.onstop=()=>{
-        if(recURL) URL.revokeObjectURL(recURL);
-        recURL = chunksBlob.length ? URL.createObjectURL(new Blob(chunksBlob,{type:'audio/webm'})) : null;
-        stream.getTracks().forEach(t=>t.stop());
-      };
-      mediaRec.start();
-    }
-  }catch(e){ console.warn('録音できません', e); }
-  if(!ASR_OK){ setAsrBox('この端末では音声認識が使えません。録音だけ行います。下の欄にタイプしてください。', true); return; }
-  try{
-    recog=new SR(); recog.lang='en-US'; recog.continuous=true; recog.interimResults=true;
-    recog.onresult=e=>{
-      let interim='';
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        const r=e.results[i];
-        if(r.isFinal) asrFinal += r[0].transcript + ' ';
-        else interim += r[0].transcript;
-      }
-      setAsrBox((asrFinal+interim).trim() || '（認識中…）');
-      const ta=asrEl('-answer'); if(ta) ta.value=(asrFinal+interim).trim();
-    };
-    recog.onerror=ev=>{ setAsrBox('音声認識でエラーが発生しました（'+ev.error+'）。下の欄にタイプしてください。', true); };
+    recog=new SR(); recog.lang='en-US'; recog.interimResults=true;
+    /* Safari の continuous は途中で切れるため、切れたら onend で繋ぎ直す方式にする */
+    recog.continuous = !(IS_IOS || IS_SAFARI);
+    recog.onresult=onAsrResult;
+    recog.onerror=onAsrError;
+    recog.onend=onAsrEnd;
     recog.start();
     setAsrBox('🎤 録音中…英語で話してください。');
-  }catch(e){ setAsrBox('音声認識を開始できませんでした。下の欄にタイプしてください。', true); }
+    return true;
+  }catch(e){
+    finishRecUi('音声認識を開始できませんでした（'+(e&&e.name||e)+'）。下の欄にタイプしてください。', true);
+    return false;
+  }
+}
+async function startTape(){
+  try{
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return;
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    if(!recording){ stream.getTracks().forEach(t=>t.stop()); return; }
+    chunksBlob=[]; mediaRec=new MediaRecorder(stream);
+    mediaRec.ondataavailable=e=>{ if(e.data.size) chunksBlob.push(e.data); };
+    mediaRec.onstop=()=>{
+      if(recURL) URL.revokeObjectURL(recURL);
+      recURL = chunksBlob.length ? URL.createObjectURL(new Blob(chunksBlob,{type:'audio/webm'})) : null;
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    mediaRec.start();
+  }catch(e){ console.warn('録音できません', e); }
+}
+function onAsrResult(e){
+  let interim='';
+  for(let i=e.resultIndex;i<e.results.length;i++){
+    const r=e.results[i];
+    if(r.isFinal) asrFinal += r[0].transcript + ' ';
+    else interim += r[0].transcript;
+  }
+  const txt=(asrFinal+interim).trim();
+  setAsrBox(txt || '（認識中…）');
+  /* 手で直したぶんを認識結果で上書きしない */
+  const ta=asrEl('-answer');
+  if(ta && (ta.value===asrLastWrite || !ta.value.trim())){ ta.value=txt; asrLastWrite=txt; }
+}
+function onAsrError(ev){
+  if(ev.error==='no-speech' || ev.error==='aborted') return;   // onend の繋ぎ直しに任せる
+  asrStopping=true;
+  finishRecUi((ASR_MSG[ev.error] || ('音声認識でエラーが発生しました（'+ev.error+'）。'))+
+              ' 下の欄にタイプしてください。', true);
+}
+/* 黙っていると認識は勝手に終わる。止めたつもりがないなら繋ぎ直す */
+function onAsrEnd(){
+  if(asrStopping || !recording){ recog=null; return; }
+  if(asrRestart++ < 40){
+    try{ recog.start(); return; }catch(e){}
+  }
+  finishRecUi('音声認識が止まりました。もう一度 🎤 を押すか、下の欄にタイプしてください。', true);
+}
+function finishRecUi(msg, off){
+  recording=false;
+  try{ if(mediaRec && mediaRec.state!=='inactive') mediaRec.stop(); }catch(e){}
+  const btn=asrEl('-rec-btn'); if(btn) btn.textContent='🎤 話す（録音・認識開始）';
+  if(msg) setAsrBox(msg, off);
 }
 function stopRec(silent){
-  recording=false;
-  try{ if(recog){ recog.onresult=null; recog.stop(); recog=null; } }catch(e){}
+  recording=false; asrStopping=true;
+  /* onresult は外さない（stop() の直後に届く最後の確定結果を取りこぼさないため） */
+  try{ if(recog) recog.stop(); }catch(e){}
   try{ if(mediaRec && mediaRec.state!=='inactive') mediaRec.stop(); }catch(e){}
   const btn=asrEl('-rec-btn');
   if(btn && !silent) btn.textContent='🎤 話す（録音・認識開始）';
 }
 function clearAnswer(){
-  asrFinal=''; const ta=asrEl('-answer'); if(ta) ta.value='';
+  asrFinal=''; asrLastWrite=''; const ta=asrEl('-answer'); if(ta) ta.value='';
   setAsrBox('ここに音声認識の結果が出ます。うまく取れないときは下の欄に直接書いてください。');
 }
 function answerValue(prefix){ const ta=document.getElementById(prefix+'-answer'); return ta ? ta.value.trim() : ''; }
@@ -803,10 +867,11 @@ function renderStart(){
   document.getElementById('sync-status').textContent = reviewSyncStatusLabel();
   document.getElementById('input-mode-chips').innerHTML =
     chipsHtml([['speak','🎤 話す（音声認識＋録音）'],['type','⌨️ 書く（タイプ）']], inputMode, 'setInput');
-  document.getElementById('input-mode-note').textContent = ASR_OK
-    ? (inputMode==='speak' ? '🎤 を押して英語で話すと、認識結果がそのまま採点されます。認識が苦手な語は下の欄で直せます。🔁サイクルの英訳と💎道場の✍️再現の両方に効きます。'
-                           : 'タイプで解答します。口に出してから書くと Speaking の練習になります。')
-    : 'この端末（ブラウザ）は音声認識に対応していません。⌨️ 書くモードで練習してください（Chrome / Safari 推奨）。';
+  document.getElementById('input-mode-note').textContent =
+    IS_FILE ? 'いまファイルを直接開いています（file://）。この状態ではブラウザが音声認識を許可しないため 🎤 は使えません。公開URL（https://…）から開くと 🎤 が使えます。'
+    : !ASR_OK ? 'この端末（ブラウザ）は音声認識に対応していません。⌨️ 書くモードで練習してください（Chrome / Safari 推奨）。'
+    : inputMode==='speak' ? '🎤 を押して英語で話すと、認識結果がそのまま採点されます。認識が苦手な語は下の欄で直せます。🔁サイクルの英訳と💎道場の✍️再現の両方に効きます。'
+                          : 'タイプで解答します。口に出してから書くと Speaking の練習になります。';
 
   const due=phDueIds();
   document.getElementById('cy-due-count').textContent = due.length;
