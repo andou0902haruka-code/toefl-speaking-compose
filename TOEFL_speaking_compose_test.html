@@ -6,25 +6,51 @@
 <title>TOEFL Speaking 型トレーニング</title>
 <style>
   /* ============================================================
-     デザインの原則（2026-08-06 全面整理）
-     ・画面に出る文字に絵文字を使わない。区別は 余白・文字サイズ・罫線・配色 で付ける
-     ・見出しは左のアクセントバー、小見出しは下罫線、番号は丸バッジ（stepno）
-     ・意味のある色は4つだけ（青=操作／緑=できた／琥珀=注意・得点源／赤=要復習）
-     ・色を増やす前に、余白（.card の padding / margin）と文字サイズで解けないかを先に見る
+     デザインの原則（2026-08-07 色分け＋マーク復活）
+     ・コーナーごとに色を割り当てる（--corner）。カードの上端・見出し・ボタン・
+       小さな丸ドットが全部その色になり、「いまどのコーナーにいるか」が一目で分かる
+     ・絵文字は控えめに復活。使ってよいのは コーナー見出し（.ic）と主要ボタン（.em）だけ。
+       本文・表・チップ・判定・データ（tip / func.label / daily / トピック名）には入れない
+     ・判定と得点源の色は据え置き（緑=できた／琥珀=注意・得点源／赤=要復習）。
+       コーナー色はこの4色とは別軸なので、意味を混ぜない
+     ・新しい色を増やす前に、既存のコーナー色を割り当て直せないかを先に見る
      ============================================================ */
 :root{
-  --bg:#f4f5f8; --card:#fff; --ink:#181d27; --sub:#5f6879; --mute:#8a93a3;
+  --bg:#eef1f7; --card:#fff; --ink:#181d27; --sub:#5f6879; --mute:#8a93a3;
   --line:#e4e7ee; --line-strong:#d2d7e2;
   --accent:#3552d8; --accent-dark:#2740a8; --accent-soft:#eef1ff; --accent-line:#ccd6f7;
-  --accent2:#5b3fbf; --accent2-soft:#f3f1fd;
-  --ok:#14804a; --ok-bg:#eef7f2; --ok-line:#c2e0d0;
-  --ng:#c0304a; --ng-bg:#fdeff2; --ng-line:#f1c8d2;
-  --warn:#8a6100; --warn-bg:#fff8ea; --warn-line:#ecdcb6;
+  --accent2:#6b3fc4; --accent2-soft:#f3f0fd; --accent2-line:#ddd2f6;
+  --ok:#14804a; --ok-bg:#eaf7f0; --ok-line:#bfe0cf;
+  --ng:#c0304a; --ng-bg:#fdeef1; --ng-line:#f1c8d2;
+  --warn:#8a6100; --warn-bg:#fff7e6; --warn-line:#f0dcaf;
   --key:#8a6100;
-  --shadow:0 1px 2px rgba(24,29,39,.04), 0 8px 20px rgba(24,29,39,.05);
+  /* --- コーナー色（画面の現在地を色で示す。意味の色＝ok/ng/warn とは別軸） --- */
+  --c-daily:#0d8577;   --c-daily-soft:#e4f4f1;  --c-daily-line:#bbe2db;   /* 今日の学習 */
+  --c-set:#4a5568;     --c-set-soft:#edeff4;    --c-set-line:#d3d9e2;     /* 解答のしかた */
+  --c-phrase:#3552d8;  --c-phrase-soft:#eef1ff; --c-phrase-line:#ccd6f7;  /* 便利フレーズ道場 */
+  --c-shadow:#6b3fc4;  --c-shadow-soft:#f3f0fd; --c-shadow-line:#ddd2f6;  /* シャドーイング */
+  --c-dash:#b4630c;    --c-dash-soft:#fdf1e2;   --c-dash-line:#f2d5b1;    /* ダッシュボード */
+  --c-mark:#14804a;    --c-mark-soft:#eaf7f0;   --c-mark-line:#bfe0cf;    /* 気になった表現 */
+  --c-cheat:#0a6ba8;   --c-cheat-soft:#e6f2fa;  --c-cheat-line:#bbdcf0;   /* テンプレ早見表 */
+  --c-trash:#8a6100;   --c-trash-soft:#fff7e6;  --c-trash-line:#f0dcaf;   /* 削除したフレーズ */
+  /* --- 実践サイクル4ステップの色（STEP1 覚える → 4 再挑戦） --- */
+  --st1:#3552d8; --st1-soft:#eef1ff;
+  --st2:#b4630c; --st2-soft:#fdf1e2;
+  --st3:#6b3fc4; --st3-soft:#f3f0fd;
+  --st4:#14804a; --st4-soft:#eaf7f0;
+  --shadow:0 1px 2px rgba(24,29,39,.04), 0 8px 20px rgba(24,29,39,.06);
   --radius:14px; --radius-sm:9px;
   --mono:"SFMono-Regular",Menlo,Consolas,monospace;
 }
+/* コーナー色を1本の変数（--corner）にまとめる。カード・画面のどちらに付けてもよい */
+.c-daily {--corner:var(--c-daily); --corner-soft:var(--c-daily-soft); --corner-line:var(--c-daily-line);}
+.c-set   {--corner:var(--c-set);   --corner-soft:var(--c-set-soft);   --corner-line:var(--c-set-line);}
+.c-phrase{--corner:var(--c-phrase);--corner-soft:var(--c-phrase-soft);--corner-line:var(--c-phrase-line);}
+.c-shadow{--corner:var(--c-shadow);--corner-soft:var(--c-shadow-soft);--corner-line:var(--c-shadow-line);}
+.c-dash  {--corner:var(--c-dash);  --corner-soft:var(--c-dash-soft);  --corner-line:var(--c-dash-line);}
+.c-mark  {--corner:var(--c-mark);  --corner-soft:var(--c-mark-soft);  --corner-line:var(--c-mark-line);}
+.c-cheat {--corner:var(--c-cheat); --corner-soft:var(--c-cheat-soft); --corner-line:var(--c-cheat-line);}
+.c-trash {--corner:var(--c-trash); --corner-soft:var(--c-trash-soft); --corner-line:var(--c-trash-line);}
 *{box-sizing:border-box;}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
   background:var(--bg);color:var(--ink);line-height:1.8;font-size:16px;-webkit-font-smoothing:antialiased;}
@@ -32,25 +58,49 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic
 .hidden{display:none !important;}
 
 /* ---------- 見出し ---------- */
-h1{font-size:1.5rem;font-weight:700;letter-spacing:.01em;margin:0 0 10px;line-height:1.5;}
-h2{display:flex;align-items:center;gap:.55em;font-size:1.08rem;font-weight:700;margin:0 0 14px;line-height:1.5;}
-h2::before{content:"";flex:none;width:4px;height:1.05em;border-radius:2px;background:var(--accent);}
+h1{display:flex;align-items:center;gap:.5em;font-size:1.5rem;font-weight:700;letter-spacing:.01em;
+  margin:0 0 12px;line-height:1.5;padding-bottom:12px;border-bottom:3px solid var(--corner,var(--accent));}
+h2{display:flex;align-items:center;gap:.55em;font-size:1.08rem;font-weight:700;margin:0 0 14px;line-height:1.5;
+  color:var(--corner,var(--ink));}
+h2::before{content:"";flex:none;width:4px;height:1.05em;border-radius:2px;background:var(--corner,var(--accent));}
+h2:has(.ic)::before{content:none;}
 h3{font-size:1rem;font-weight:700;color:var(--ink);margin:22px 0 8px;line-height:1.6;}
 h3:first-child{margin-top:2px;}
 .sub{color:var(--sub);font-size:.88rem;line-height:1.8;margin:0 0 20px;}
-/* カード内の区切り。小見出し＋説明文を下罫線で仕切る */
-.sec{margin:32px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line);}
-.sec:first-child{margin-top:2px;}
-.sec h3{margin:0;}
+/* 見出しの絵文字を四角いバッジに入れる。コーナー色の面と合わせて「場所の印」にする */
+.ic{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:30px;height:30px;border-radius:9px;font-size:.95rem;line-height:1;
+  background:var(--corner-soft,var(--accent-soft));border:1px solid var(--corner-line,var(--accent-line));}
+h1 .ic{width:34px;height:34px;border-radius:10px;font-size:1.05rem;}
+/* スタート画面の見出しだけ、下線に4コーナーの色をそのまま並べる（色の凡例を兼ねる） */
+#screen-start h1{border-bottom:none;padding-bottom:14px;
+  background:linear-gradient(90deg,var(--c-daily) 0 25%,var(--c-phrase) 25% 50%,
+    var(--c-shadow) 50% 75%,var(--c-dash) 75% 100%) bottom left/100% 3px no-repeat;}
+/* ボタンの中の絵文字。文字と同じ大きさで、右に少しだけ間をあける */
+.em{font-style:normal;margin-right:.4em;}
+/* カード内の区切り。小見出し＋説明文をコーナー色の帯にして、カードの端まで敷く */
+.sec{margin:32px -26px 16px;padding:14px 26px 12px;background:var(--corner-soft,#f7f8fb);
+  border-top:1px solid var(--corner-line,var(--line));border-bottom:1px solid var(--corner-line,var(--line));}
+.sec:first-child{margin-top:-2px;}
+.sec h3{margin:0;display:flex;align-items:center;gap:.45em;color:var(--corner,var(--ink));}
+.sec h3 .ic{width:26px;height:26px;border-radius:8px;font-size:.86rem;background:#fff;border-color:var(--corner-line);}
 .sec p{margin:5px 0 0;font-size:.84rem;color:var(--sub);line-height:1.75;}
-/* ボタン群の上に置く小さなラベル */
-.group-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--mute);margin:18px 0 2px;}
-/* 手順の番号。①②③ の代わりに丸バッジで示す */
+/* ボタン群の上に置く小さなラベル。先頭のドットがコーナー色になる */
+.group-label{display:flex;align-items:center;gap:7px;font-size:.7rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--mute);margin:18px 0 2px;}
+.group-label::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;
+  background:var(--corner,var(--mute));}
+/* 手順の番号。①②③ の代わりに丸バッジで示す（s1〜s4 でステップ色が付く） */
 .stepno{display:inline-flex;align-items:center;justify-content:center;flex:none;
-  width:23px;height:23px;border-radius:50%;background:var(--accent);color:#fff;
+  width:23px;height:23px;border-radius:50%;background:var(--sn,var(--accent));color:#fff;
   font-size:.76rem;font-weight:700;line-height:1;}
+.stepno.s1{--sn:var(--st1);} .stepno.s2{--sn:var(--st2);}
+.stepno.s3{--sn:var(--st3);} .stepno.s4{--sn:var(--st4);}
 h3 .stepno{margin-right:9px;vertical-align:-4px;}
+/* 本文の中で STEP1〜4 に触れるときの印（説明文とステップの色をそろえる） */
+.k1,.k2,.k3,.k4{font-weight:700;padding:1px 7px;border-radius:5px;white-space:nowrap;}
+.k1{color:var(--st1);background:var(--st1-soft);} .k2{color:var(--st2);background:var(--st2-soft);}
+.k3{color:var(--st3);background:var(--st3-soft);} .k4{color:var(--st4);background:var(--st4-soft);}
 /* 「得点源のブロック」の印。★ の代わりに文字でそのまま示す */
 .key-tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:5px;
   background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--key);
@@ -60,32 +110,52 @@ h3 .stepno{margin-right:9px;vertical-align:-4px;}
   background:var(--ng-bg);color:var(--ng);font-size:.62rem;font-weight:700;letter-spacing:.08em;vertical-align:1px;}
 
 /* ---------- カード ---------- */
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
   padding:24px 26px;margin-bottom:20px;box-shadow:var(--shadow);}
+/* コーナーのカードは上端に4pxの色帯を引く（どの色の場所にいるかを最初に見せる） */
+.card.corner{padding-top:26px;}
+.card.corner::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--corner);
+  border-radius:var(--radius) var(--radius) 0 0;}
 .back-link{display:inline-block;color:var(--sub);text-decoration:none;font-size:.85rem;
   margin-bottom:16px;cursor:pointer;padding:4px 0;}
-.back-link:hover{color:var(--accent-dark);}
+.back-link:hover{color:var(--corner,var(--accent-dark));}
 
 /* ---------- ボタン ---------- */
 button{font-family:inherit;font-size:.9rem;font-weight:600;line-height:1.5;cursor:pointer;
   border-radius:var(--radius-sm);border:1px solid var(--line-strong);background:#fff;color:var(--ink);
   padding:9px 16px;transition:background .15s,border-color .15s,color .15s;}
-button:hover:not(:disabled){border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-dark);}
+button:hover:not(:disabled){border-color:var(--corner,var(--accent-line));
+  background:var(--corner-soft,var(--accent-soft));color:var(--corner,var(--accent-dark));}
 button:active:not(:disabled){transform:translateY(1px);}
 button:disabled{background:#f6f7fa;color:var(--mute);border-color:var(--line);cursor:not-allowed;}
-.btn-main{background:var(--accent);color:#fff;border-color:var(--accent);}
-.btn-main:hover:not(:disabled){background:var(--accent-dark);color:#fff;border-color:var(--accent-dark);}
+button:disabled .em{opacity:.45;}
+.btn-main{background:var(--corner,var(--accent));color:#fff;border-color:var(--corner,var(--accent));
+  box-shadow:0 1px 0 rgba(24,29,39,.06);}
+.btn-main:hover:not(:disabled){background:var(--corner,var(--accent-dark));color:#fff;
+  border-color:var(--corner,var(--accent-dark));filter:brightness(.9);}
+/* コーナー色を薄く敷いたボタン（同じ列の中で「よく使うもの」を1段持ち上げる） */
+.btn-soft{background:var(--corner-soft,var(--accent-soft));color:var(--corner,var(--accent-dark));
+  border-color:var(--corner-line,var(--accent-line));}
+.btn-soft:hover:not(:disabled){background:#fff;border-color:var(--corner,var(--accent));}
 .btn-rec{background:var(--ng);color:#fff;border-color:var(--ng);}
 .btn-rec:hover:not(:disabled){background:#a5263c;color:#fff;border-color:#a5263c;}
 .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+:focus-visible{outline:2px solid var(--corner,var(--accent));outline-offset:2px;}
 
 /* ---------- チップ（選択・ラベル） ---------- */
 .chips{display:flex;flex-wrap:wrap;gap:7px;}
 .chip{font-size:.78rem;padding:4px 12px;border-radius:999px;background:#fff;color:var(--sub);
   border:1px solid var(--line-strong);line-height:1.6;}
-.chip.on{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);font-weight:700;}
+.chip.on{background:var(--corner-soft,var(--accent-soft));color:var(--corner,var(--accent-dark));
+  border-color:var(--corner,var(--accent));font-weight:700;}
 .chip.key{background:var(--warn-bg);color:var(--key);border-color:var(--warn-line);}
+.chip.weak{background:var(--ng-bg);color:var(--ng);border-color:var(--ng-line);font-weight:700;}
+/* フレーズの見出しチップ3種（はたらき／テンプレ上の置き場所／id）を色で描き分ける */
+.chip.tag-func{background:var(--accent2-soft);color:var(--accent2);border-color:var(--accent2-line);font-weight:700;}
+.chip.tag-use{background:var(--warn-bg);color:var(--key);border-color:var(--warn-line);font-weight:700;}
+.chip.tag-id{color:var(--mute);font-family:var(--mono);font-size:.7rem;}
+.chip.tag-mark{background:var(--c-mark-soft);color:var(--c-mark);border-color:var(--c-mark-line);font-weight:700;}
+.chip.tag-edit{background:var(--c-cheat-soft);color:var(--c-cheat);border-color:var(--c-cheat-line);font-weight:700;}
 .chips[onclick],.chip[onclick]{cursor:pointer;}
 
 /* ---------- 入力 ---------- */
@@ -103,7 +173,8 @@ label.opt:hover{border-color:var(--accent-line);}
 label.opt input{accent-color:var(--accent);width:16px;height:16px;}
 
 /* ---------- 出題文・注記 ---------- */
-.ja-box{background:#f7f9fd;border:1px solid var(--line);border-left:4px solid var(--accent-line);
+.ja-box{background:var(--corner-soft,#f7f9fd);border:1px solid var(--corner-line,var(--line));
+  border-left:4px solid var(--corner,var(--accent));
   border-radius:var(--radius-sm);padding:16px 18px;font-size:1.02rem;line-height:1.9;margin:12px 0;}
 .big-ja{font-size:1.08rem;}
 .lv-note{font-size:.85rem;color:var(--sub);line-height:1.75;background:#f8f9fc;
@@ -138,10 +209,10 @@ summary{cursor:pointer;font-size:.85rem;color:var(--accent-dark);font-weight:600
 .res-ng{color:var(--ng);font-weight:700;}
 
 /* ---------- テンプレ上の置き場所 ---------- */
-.tb{background:#f7f9fd;border:1px solid var(--line);border-left:4px solid var(--accent);
+.tb{background:#fafbfe;border:1px solid var(--line);border-left:4px solid var(--corner,var(--accent));
   border-radius:var(--radius-sm);padding:15px 18px;margin:14px 0;}
 .tb-form{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);}
-.tb-slot{font-weight:700;font-size:1rem;color:var(--accent-dark);margin-top:4px;}
+.tb-slot{font-weight:700;font-size:1rem;color:var(--corner,var(--accent-dark));margin-top:4px;}
 .tb-frame{font-family:var(--mono);background:#fff;border:1px solid var(--line);
   border-radius:6px;padding:9px 12px;margin:9px 0;font-size:.85rem;}
 .tb-note{font-size:.85rem;color:var(--sub);margin-top:8px;line-height:1.75;}
@@ -149,7 +220,8 @@ summary{cursor:pointer;font-size:.85rem;color:var(--accent-dark);font-weight:600
 /* 骨組み（5ブロックの並び。いまの位置を強調し、得点源に印を付ける） */
 .skeleton{list-style:none;margin:8px 0 0;padding:0;font-size:.84rem;}
 .skeleton li{padding:5px 12px;border-left:3px solid #dbe1ee;color:var(--sub);}
-.skeleton li.here{border-left-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:700;}
+.skeleton li.here{border-left-color:var(--corner,var(--accent));background:var(--corner-soft,var(--accent-soft));
+  color:var(--ink);font-weight:700;}
 .skeleton li.key::after{content:"得点源";margin-left:8px;font-size:.66rem;font-weight:700;
   color:var(--key);background:var(--warn-bg);border:1px solid var(--warn-line);
   border-radius:4px;padding:0 5px;vertical-align:1px;}
@@ -158,48 +230,62 @@ summary{cursor:pointer;font-size:.85rem;color:var(--accent-dark);font-weight:600
 .stat{display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:.84rem;color:var(--sub);
   margin-bottom:6px;}
 .stat a{color:var(--sub);}
-.bar{height:6px;background:#e6e9f1;border-radius:999px;overflow:hidden;margin:0 0 18px;}
-.bar>i{display:block;height:100%;background:var(--accent);transition:width .25s;}
-/* 実践サイクルの4ステップ */
+.bar{height:6px;background:#e0e5ef;border-radius:999px;overflow:hidden;margin:0 0 18px;}
+.bar>i{display:block;height:100%;background:var(--corner,var(--accent));transition:width .25s;}
+/* 実践サイクルの4ステップ。STEP1〜4 にそれぞれ色を割り当て、いまの位置を輪郭で示す */
 .steps{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px;list-style:none;padding:0;}
 .steps li{display:inline-flex;align-items:center;gap:7px;font-size:.8rem;font-weight:600;
   padding:5px 14px 5px 6px;border-radius:999px;background:#fff;color:var(--sub);border:1px solid var(--line-strong);}
+.steps li:nth-child(1){--sc:var(--st1);--sc-soft:var(--st1-soft);}
+.steps li:nth-child(2){--sc:var(--st2);--sc-soft:var(--st2-soft);}
+.steps li:nth-child(3){--sc:var(--st3);--sc-soft:var(--st3-soft);}
+.steps li:nth-child(4){--sc:var(--st4);--sc-soft:var(--st4-soft);}
 .steps li i{display:inline-flex;align-items:center;justify-content:center;font-style:normal;
   width:20px;height:20px;border-radius:50%;background:#eceff4;color:var(--sub);font-size:.72rem;font-weight:700;}
-.steps li.here{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);font-weight:700;}
-.steps li.here i{background:var(--accent);color:#fff;}
-.steps li.done{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line);}
-.steps li.done i{background:var(--ok);color:#fff;}
+.steps li.here{background:var(--sc-soft);color:var(--sc);border-color:var(--sc);font-weight:700;
+  box-shadow:0 0 0 3px var(--sc-soft);}
+.steps li.here i{background:var(--sc);color:#fff;}
+.steps li.done{background:var(--sc-soft);color:var(--sc);border-color:var(--sc-soft);}
+.steps li.done i{background:var(--sc);color:#fff;}
 
 /* ---------- 表 ---------- */
 table{width:100%;border-collapse:collapse;font-size:.86rem;margin:6px 0 4px;}
 th,td{border-bottom:1px solid var(--line);padding:10px 10px;text-align:left;vertical-align:top;}
-th{color:var(--mute);font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
-  border-bottom:1px solid var(--line-strong);}
+th{color:var(--corner,var(--mute));font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--corner-soft,transparent);border-bottom:1px solid var(--corner-line,var(--line-strong));}
+th:first-child{border-top-left-radius:6px;border-bottom-left-radius:6px;}
+th:last-child{border-top-right-radius:6px;border-bottom-right-radius:6px;}
 tr:last-child td{border-bottom:none;}
+/* 定着度の横棒（数字だけだと差が読めないので、割合をそのまま長さで見せる） */
+.rate{display:inline-flex;align-items:center;gap:8px;vertical-align:middle;}
+.rate>i{display:block;flex:none;width:70px;height:6px;border-radius:999px;background:#e6e9f1;overflow:hidden;}
+.rate>i>b{display:block;height:100%;border-radius:999px;background:var(--rc,var(--ok));}
+.rate.lo{--rc:var(--ng);} .rate.mid{--rc:#d9a520;} .rate.hi{--rc:var(--ok);}
 
 /* ---------- 音声ボタン（🔊 の代わりにインラインSVG） ---------- */
 .play{display:inline-flex;align-items:center;justify-content:center;border:none;
-  background:var(--accent);color:#fff;border-radius:50%;width:30px;height:30px;
+  background:var(--corner,var(--accent));color:#fff;border-radius:50%;width:30px;height:30px;
   padding:0;flex-shrink:0;vertical-align:middle;transition:background .15s;}
-.play:hover:not(:disabled){background:var(--accent-dark);color:#fff;}
+.play:hover:not(:disabled){background:var(--corner,var(--accent-dark));color:#fff;filter:brightness(.9);}
 .play.playing{background:var(--ng);}
-.play.playing:hover{background:var(--ng);color:#fff;}
+.play.playing:hover{background:var(--ng);color:#fff;filter:none;}
 
 /* ---------- 便利フレーズ ---------- */
-.ph-en{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--accent-dark);line-height:1.65;}
+.ph-en{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--corner,var(--accent-dark));line-height:1.65;}
 .cloze-in{font-family:var(--mono);border:none;border-bottom:2px solid #d9a520;background:#fdf1cd;
   border-radius:4px;padding:3px 9px;font-size:.95rem;min-width:6rem;color:inherit;}
 .cloze-in:focus{outline:none;border-bottom-color:var(--accent);background:#fff;box-shadow:0 0 0 2px var(--accent-soft);}
 .answer-box{background:var(--ok-bg);border:1px solid var(--ok-line);border-left:4px solid var(--ok);
   border-radius:var(--radius-sm);padding:16px 18px;font-size:1.05rem;line-height:1.9;margin:12px 0;}
-.mt-card{border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0;background:#fff;}
-.mt-slot{font-size:.86rem;font-weight:700;color:var(--accent-dark);margin-top:14px;
+.mt-card{border:1px solid var(--line);border-left:4px solid var(--corner-line,var(--line-strong));
+  border-radius:12px;padding:16px 18px;margin:12px 0;background:#fff;}
+.mt-slot{font-size:.86rem;font-weight:700;color:var(--corner,var(--accent-dark));margin-top:14px;
   padding-top:10px;border-top:1px solid var(--line);}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
 
 /* ---------- シャドーイング ---------- */
-.sh-stage{min-height:150px;border:1px solid var(--line);border-radius:12px;padding:20px 22px;background:#fbfcfe;
+.sh-stage{min-height:150px;border:1px solid var(--line);border-top:3px solid var(--corner,var(--accent));
+  border-radius:12px;padding:20px 22px;background:#fbfcfe;
   display:flex;flex-direction:column;justify-content:center;gap:10px;margin:14px 0;}
 .sh-tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;width:fit-content;padding:3px 10px;border-radius:999px;}
 .sh-tag.Q{background:var(--accent2-soft);color:var(--accent2);}
@@ -207,16 +293,19 @@ tr:last-child td{border-bottom:none;}
 .sh-stage .sh-en{font-size:1.15rem;font-weight:600;line-height:1.8;}
 .sh-stage .sh-ja{font-size:.98rem;color:var(--sub);}
 .sh-hint{color:var(--mute);font-size:.88rem;}
-.sh-ctrl{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:50%;width:46px;height:46px;
+.sh-ctrl{border:1px solid var(--corner,var(--accent));background:var(--corner,var(--accent));color:#fff;
+  border-radius:50%;width:46px;height:46px;
   padding:0;display:inline-flex;align-items:center;justify-content:center;}
-.sh-ctrl:hover:not(:disabled){background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;}
-.sh-ctrl.small{width:40px;height:40px;background:#fff;color:var(--accent-dark);border-color:var(--line-strong);}
-.sh-ctrl.small:hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent-line);}
+.sh-ctrl:hover:not(:disabled){background:var(--corner,var(--accent-dark));
+  border-color:var(--corner,var(--accent-dark));color:#fff;filter:brightness(.9);}
+.sh-ctrl.small{width:40px;height:40px;background:#fff;color:var(--corner,var(--accent-dark));border-color:var(--line-strong);}
+.sh-ctrl.small:hover:not(:disabled){background:var(--corner-soft,var(--accent-soft));
+  border-color:var(--corner-line,var(--accent-line));filter:none;}
 .sh-ctrl:disabled{opacity:.4;}
 .sh-seg{padding:10px 12px;border-radius:10px;border:1px solid transparent;cursor:pointer;margin-bottom:2px;
   display:flex;gap:12px;align-items:baseline;}
 .sh-seg:hover{background:#f4f6fa;}
-.sh-seg.on{background:var(--accent-soft);border-color:var(--accent-line);}
+.sh-seg.on{background:var(--corner-soft,var(--accent-soft));border-color:var(--corner-line,var(--accent-line));}
 .sh-seg .sh-stag{font-size:.64rem;font-weight:700;padding:2px 8px;border-radius:999px;flex-shrink:0;}
 .sh-seg.Q .sh-stag{background:var(--accent2-soft);color:var(--accent2);}
 .sh-seg.A .sh-stag{background:var(--ok-bg);color:var(--ok);}
@@ -249,15 +338,24 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
   border:1.5px solid var(--line-strong);border-radius:8px;margin-top:8px;}
 
 /* ---------- 結果 ---------- */
-.score{font-size:2.6rem;font-weight:700;letter-spacing:-.02em;color:var(--accent);margin:6px 0 2px;}
+.score{font-size:2.6rem;font-weight:700;letter-spacing:-.02em;color:var(--corner,var(--accent));margin:6px 0 2px;}
 .score span{font-size:.9rem;font-weight:600;color:var(--mute);}
 .grade{display:inline-block;font-size:.76rem;font-weight:700;letter-spacing:.08em;
-  padding:5px 14px;border-radius:999px;background:var(--accent-soft);color:var(--accent-dark);}
+  padding:5px 14px;border-radius:999px;background:var(--gd-bg,var(--accent-soft));color:var(--gd,var(--accent-dark));
+  border:1px solid var(--gd-line,transparent);}
+.grade.g-a{--gd:var(--ok);--gd-bg:var(--ok-bg);--gd-line:var(--ok-line);}
+.grade.g-b{--gd:var(--accent);--gd-bg:var(--accent-soft);--gd-line:var(--accent-line);}
+.grade.g-c{--gd:var(--key);--gd-bg:var(--warn-bg);--gd-line:var(--warn-line);}
+.grade.g-d{--gd:var(--ng);--gd-bg:var(--ng-bg);--gd-line:var(--ng-line);}
 
 @media (max-width:640px){
   .wrap{padding:20px 12px 70px;}
   .card{padding:18px 16px;border-radius:12px;}
+  .card.corner{padding-top:20px;}
+  .sec{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;}
   h1{font-size:1.25rem;}
+  h1 .ic{width:30px;height:30px;font-size:.95rem;}
+  .ic{width:27px;height:27px;font-size:.88rem;}
   body{font-size:15px;}
 }
 </style>
@@ -275,37 +373,37 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
      ・ <button id="update-btn" onclick="updateToLatest()">最新に更新</button>
      <span id="update-status" class="small"></span></p>
 
-  <div id="daily-corner" class="card hidden">
-    <h2>今日の学習コーナー</h2>
+  <div id="daily-corner" class="card corner c-daily hidden">
+    <h2><span class="ic">📅</span>今日の学習コーナー</h2>
     <div id="daily-latest"></div>
     <div class="btn-row">
-      <button class="btn-main" onclick="startDailyCycle()">この日のフレーズを実践サイクルで回す</button>
+      <button class="btn-main" onclick="startDailyCycle()"><i class="em">🔁</i>この日のフレーズを実践サイクルで回す</button>
       <button onclick="startDailyPhrases('mix')">この日のフレーズを解く</button>
       <button onclick="openDaily()">学習日を選ぶ・内容を見る</button>
     </div>
     <div class="btn-row" id="daily-shadow-btns"></div>
   </div>
 
-  <div class="card">
-    <h2>解答のしかた</h2>
+  <div class="card corner c-set">
+    <h2><span class="ic">🎙</span>解答のしかた</h2>
     <div class="chips" id="input-mode-chips"></div>
     <p class="small" id="input-mode-note"></p>
   </div>
 
-  <div class="card">
-    <h2>便利フレーズ道場</h2>
+  <div class="card corner c-phrase">
+    <h2><span class="ic">💎</span>便利フレーズ道場</h2>
     <p class="small">テンプレ集の固定フレーズ・差し替えパーツ・理由の引き出し8つから <b id="ph-total">0</b> 件。
        どの形式でも解答後に必ず「<b>このフレーズがテンプレのどこで使えるか</b>」が出ます。</p>
 
     <div class="sec">
-      <h3>実践サイクル（道場のメイン）</h3>
+      <h3><span class="ic">🔁</span>実践サイクル（道場のメイン）</h3>
       <p>1フレーズを4ステップで回します。
-        <b>STEP1 覚える</b> → <b>STEP2 英訳</b>（そのフレーズが使われていた日本語文。答えはまだ出ません）→
-        <b>STEP3 音読</b>（答えの英文を見て読む）→ <b>STEP4 再挑戦</b>（もう一度おなじ日本語を英訳）。
+        <span class="k1">STEP1 覚える</span> → <span class="k2">STEP2 英訳</span>（そのフレーズが使われていた日本語文。答えはまだ出ません）→
+        <span class="k3">STEP3 音読</span>（答えの英文を見て読む）→ <span class="k4">STEP4 再挑戦</span>（もう一度おなじ日本語を英訳）。
         1回目と2回目の差がそのまま「言えるようになった量」です。</p>
     </div>
     <div class="btn-row">
-      <button id="cy-due-btn" class="btn-main" onclick="startCycle('due')">今日の復習（<span id="cy-due-count">0</span>件）</button>
+      <button id="cy-due-btn" class="btn-main" onclick="startCycle('due')"><i class="em">🔁</i>今日の復習（<span id="cy-due-count">0</span>件）</button>
     </div>
     <p class="group-label">ランダムに回す</p>
     <div class="btn-row" id="cy-random-btns"></div>
@@ -318,13 +416,13 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
     </div>
     <p class="group-label">シャドーイングでマークした「気になった表現」</p>
     <div class="btn-row">
-      <button id="cy-mark-btn" class="btn-main" onclick="startCycle('mark')">マークした表現を回す（<span id="cy-mark-count">0</span>）</button>
+      <button id="cy-mark-btn" class="btn-soft" onclick="startCycle('mark')"><i class="em">🌱</i>マークした表現を回す（<span id="cy-mark-count">0</span>）</button>
       <button onclick="openMarks()">マーク一覧・メモを直す</button>
     </div>
     <div id="cy-stats" class="small"></div>
 
     <div class="sec">
-      <h3>単発形式でおさらいする</h3>
+      <h3><span class="ic">⚡</span>単発形式でおさらいする</h3>
       <p>サイクルを1周したフレーズの復習用。1問1答で手早く数をこなします。</p>
     </div>
     <div class="btn-row">
@@ -336,21 +434,21 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
     <div id="ph-stats" class="small"></div>
 
     <div class="sec">
-      <h3>フレーズを見る・直す</h3>
+      <h3><span class="ic">📗</span>フレーズを見る・直す</h3>
       <p>収録フレーズの参照ページです。編集・削除もここから行えます。</p>
     </div>
     <div class="btn-row">
-      <button onclick="openPhraseCat()">カテゴリ別（型 ▸ ブロック）</button>
-      <button id="ph-fav-btn" onclick="openPhraseFav()">お気に入り＝マイテンプレ（<span id="ph-fav-count">0</span>）</button>
-      <button id="ph-bm-btn" onclick="openPhraseBm()">フレーズ復習リスト（<span id="ph-bm-count">0</span>）</button>
-      <button onclick="openPhraseList()">フレーズ一覧（編集・削除）</button>
-      <button onclick="openCheat()">テンプレ早見表</button>
-      <button id="ph-trash-btn" onclick="openPhraseTrash()">削除したフレーズ（<span id="ph-trash-count">0</span>）</button>
+      <button onclick="openPhraseCat()"><i class="em">🗂</i>カテゴリ別（型 ▸ ブロック）</button>
+      <button id="ph-fav-btn" onclick="openPhraseFav()"><i class="em">⭐</i>お気に入り＝マイテンプレ（<span id="ph-fav-count">0</span>）</button>
+      <button id="ph-bm-btn" onclick="openPhraseBm()"><i class="em">🔖</i>フレーズ復習リスト（<span id="ph-bm-count">0</span>）</button>
+      <button onclick="openPhraseList()"><i class="em">📗</i>フレーズ一覧（編集・削除）</button>
+      <button onclick="openCheat()"><i class="em">📘</i>テンプレ早見表</button>
+      <button id="ph-trash-btn" onclick="openPhraseTrash()"><i class="em">🗑</i>削除したフレーズ（<span id="ph-trash-count">0</span>）</button>
     </div>
   </div>
 
-  <div class="card hidden" id="shadow-corner">
-    <h2>シャドーイングコーナー</h2>
+  <div class="card corner c-shadow hidden" id="shadow-corner">
+    <h2><span class="ic">🎧</span>シャドーイングコーナー</h2>
     <p class="small">『TOEFL Speaking シャドーイング』の模範解答をそのまま持ち込みました
       （<b id="sh-topic-n">0</b>トピック・<b id="sh-seg-n">0</b>文）。
       面接官の質問 → 模範解答を1文ずつ流し、字幕・速度・リピートを切り替えながら<b>真似して言う</b>コーナーです。
@@ -362,21 +460,22 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
     <div id="sh-stats" class="small"></div>
   </div>
 
-  <div class="card">
-    <h2>弱点ダッシュボード（累計）</h2>
+  <div class="card corner c-dash">
+    <h2><span class="ic">📊</span>弱点ダッシュボード（累計）</h2>
     <div id="dash"></div>
     <div class="btn-row"><button onclick="resetStats()">記録をリセット</button></div>
   </div>
 </div>
 
 <!-- ============================ 実践サイクル ============================ -->
-<div id="screen-cycle" class="hidden">
+<!-- 画面の色は STEP ごとに変わる（renderCycleStep が c-phrase/c-dash/c-shadow/c-mark を付け替える） -->
+<div id="screen-cycle" class="c-phrase hidden">
   <div class="stat">
     <span id="cy-progress"></span><span id="cy-phase"></span>
     <a href="#" onclick="if(confirm('中断してスタート画面に戻りますか？'))showScreen('screen-start');return false;">中断してスタートへ</a>
   </div>
   <div class="bar"><i id="cy-bar" style="width:0%"></i></div>
-  <div class="card">
+  <div class="card corner">
     <div class="chips" id="cy-chips"></div>
     <ul class="steps" id="cy-steps"></ul>
     <label class="opt"><input type="checkbox" id="cy-bm" onchange="toggleCycleBm()"> 復習リストに入れる</label>
@@ -386,9 +485,9 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
 </div>
 
 <!-- ============================ 結果 ============================ -->
-<div id="screen-result" class="hidden">
-  <h1>結果</h1>
-  <div id="result-body" class="card"></div>
+<div id="screen-result" class="c-phrase hidden">
+  <h1><span class="ic">🏁</span>結果</h1>
+  <div id="result-body" class="card corner"></div>
   <div class="btn-row">
     <button class="btn-main" onclick="retrySame()">もう一度挑戦する</button>
     <button onclick="showScreen('screen-start')">スタート画面に戻る</button>
@@ -396,13 +495,13 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
 </div>
 
 <!-- ============================ 便利フレーズ ============================ -->
-<div id="screen-phrase" class="hidden">
+<div id="screen-phrase" class="c-phrase hidden">
   <div class="stat">
     <span id="p-progress"></span>
     <a href="#" onclick="if(confirm('中断してスタート画面に戻りますか？'))showScreen('screen-start');return false;">中断してスタートへ</a>
   </div>
   <div class="bar"><i id="p-bar" style="width:0%"></i></div>
-  <div class="card">
+  <div class="card corner">
     <div class="chips" id="p-chips"></div>
     <label class="opt"><input type="checkbox" id="p-bm" onchange="togglePhraseBm()"> 復習リストに入れる</label>
     <label class="opt"><input type="checkbox" id="p-fav" onchange="togglePhraseFav()"> お気に入り（マイテンプレ）に入れる</label>
@@ -412,28 +511,28 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
   </div>
 </div>
 
-<div id="screen-phrase-cat" class="hidden">
+<div id="screen-phrase-cat" class="c-phrase hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>カテゴリ別（型 ▸ ブロック）</h1>
-  <div id="pcat-body" class="card"></div>
+  <h1><span class="ic">🗂</span>カテゴリ別（型 ▸ ブロック）</h1>
+  <div id="pcat-body" class="card corner"></div>
 </div>
 
-<div id="screen-phrase-fav" class="hidden">
+<div id="screen-phrase-fav" class="c-dash hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>お気に入り＝マイテンプレ</h1>
+  <h1><span class="ic">⭐</span>お気に入り＝マイテンプレ</h1>
   <div id="pfav-body"></div>
 </div>
 
-<div id="screen-phrase-bm" class="hidden">
+<div id="screen-phrase-bm" class="c-mark hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>フレーズ復習リスト</h1>
+  <h1><span class="ic">🔖</span>フレーズ復習リスト</h1>
   <div id="pbm-body"></div>
 </div>
 
-<div id="screen-phrase-list" class="hidden">
+<div id="screen-phrase-list" class="c-phrase hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>フレーズ一覧</h1>
-  <div class="card">
+  <h1><span class="ic">📗</span>フレーズ一覧</h1>
+  <div class="card corner">
     <input id="ph-search" type="text" placeholder="英語・日本語・例文で検索" oninput="renderPhraseList()"
       style="width:100%;">
     <p class="group-label">絞り込み</p>
@@ -449,30 +548,30 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
   <div id="phlist-body"></div>
 </div>
 
-<div id="screen-phrase-edit" class="hidden">
+<div id="screen-phrase-edit" class="c-phrase hidden">
   <a class="back-link" href="#" onclick="phEditReturn();return false;">← 編集をやめて戻る</a>
-  <h1>フレーズを直す</h1>
+  <h1><span class="ic">✏️</span>フレーズを直す</h1>
   <div id="phedit-body"></div>
 </div>
 
-<div id="screen-phrase-trash" class="hidden">
+<div id="screen-phrase-trash" class="c-trash hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>削除したフレーズ</h1>
+  <h1><span class="ic">🗑</span>削除したフレーズ</h1>
   <div id="phtrash-body"></div>
 </div>
 
 <!-- ============================ テンプレ早見表 ============================ -->
-<div id="screen-cheat" class="hidden">
+<div id="screen-cheat" class="c-cheat hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>テンプレ早見表</h1>
+  <h1><span class="ic">📘</span>テンプレ早見表</h1>
   <div id="cheat-body"></div>
 </div>
 
 <!-- ============================ シャドーイング ============================ -->
-<div id="screen-shadow" class="hidden">
+<div id="screen-shadow" class="c-shadow hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>シャドーイング</h1>
-  <div class="card">
+  <h1><span class="ic">🎧</span>シャドーイング</h1>
+  <div class="card corner">
     <div class="btn-row" style="align-items:center;">
       <span class="small">トピック</span>
       <select id="sh-topic" class="sh-sel" onchange="shSetTopic(this.value)"></select>
@@ -491,26 +590,26 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
     <div class="chips hidden" style="margin-top:8px;" id="sh-nextver"></div>
   </div>
 
-  <div class="card hidden" id="sh-mark"></div>
+  <div class="card corner c-mark hidden" id="sh-mark"></div>
 
   <div class="card">
-    <h2>スクリプト全文</h2>
+    <h2><span class="ic">📄</span>スクリプト全文</h2>
     <p class="small">文をクリックするとそこから再生します。右端の「マーク」から気になった表現を拾えます。</p>
     <div id="sh-transcript"></div>
   </div>
 </div>
 
 <!-- ============================ 気になった表現 ============================ -->
-<div id="screen-marks" class="hidden">
+<div id="screen-marks" class="c-mark hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>気になった表現</h1>
+  <h1><span class="ic">🌱</span>気になった表現</h1>
   <div id="marks-body"></div>
 </div>
 
 <!-- ============================ 学習コーナー ============================ -->
-<div id="screen-daily" class="hidden">
+<div id="screen-daily" class="c-daily hidden">
   <a class="back-link" href="#" onclick="showScreen('screen-start');return false;">← スタート画面に戻る</a>
-  <h1>学習コーナー</h1>
+  <h1><span class="ic">📅</span>学習コーナー</h1>
   <div id="daily-body"></div>
 </div>
 
@@ -528,8 +627,8 @@ const SHADOW_TOPICS      = {"music": {"title": "音楽 (Music)", "questions": {"
 const MARK_PROMOTED      = {"Mmsfzwcqfjdw2": "S089", "Mmsfzyydqtxu3": "S090"};
 const FOLDER_KEY = "TOEFL_speaking";
 /* ビルドの版。同じ内容が version.json にも書かれていて、「最新に更新」はこの2つを見比べる */
-const BUILD_ID = "2a7c9798433d";
-const BUILT_AT = "2026-08-06 21:49";
+const BUILD_ID = "36a6e62f18f6";
+const BUILT_AT = "2026-08-06 23:18";
 
 const TMPL_FORM = {}; TEMPLATE_MAP.forms.forEach(f=>{ TMPL_FORM[f.id]=f; });
 const TMPL_BLOCK = {}; TEMPLATE_MAP.blocks.forEach(b=>{ TMPL_BLOCK[b.id]=b; });
@@ -1122,7 +1221,7 @@ function renderDash(){
       .filter(x=>x.n>=2).sort((a,b)=>a.r-b.r).slice(0,8);
   };
   const tbl=(title,rows,fmt)=> rows.length ? `<h3>${title}（定着度が低い順）</h3><table>${rows.map(r=>
-      `<tr><td>${esc(fmt(r.k))}</td><td style="width:5rem;">${Math.round(r.r*100)}%</td><td style="width:4rem;">${r.n}回</td></tr>`).join('')}</table>` : '';
+      `<tr><td>${esc(fmt(r.k))}</td><td style="width:9rem;">${rateHtml(r.r)}</td><td style="width:4rem;">${r.n}回</td></tr>`).join('')}</table>` : '';
   const boxes={1:0,2:0,3:0,4:0};
   Object.values(getPhSrs()).forEach(v=>{ boxes[v.box]=(boxes[v.box]||0)+1; });
   const t=cy.tot||{n:0,s1:0,s2:0,read:0};
@@ -1142,7 +1241,7 @@ function renderDash(){
     ${tbl('ブロック別', agg(p=>[...new Set((p.uses||[]).map(u=>u.slot))]), blockLabel)}
     ${tbl('はたらき別', agg(p=>[p.func]), funcLabel)}
     ${weak.length?`<h3>苦手フレーズ（クリックで実践サイクル）</h3><div class="chips">${
-      weak.map(w=>`<span class="chip" style="cursor:pointer;" onclick="startCycleOne('${w.id}')">${
+      weak.map(w=>`<span class="chip ${w.r<0.5?'weak':''}" style="cursor:pointer;" onclick="startCycleOne('${w.id}')">${
         esc((PH_BY_ID[w.id]||{}).en||w.id)} ${Math.round(w.r*100)}%</span>`).join('')}</div>`:''}`;
 }
 
@@ -1160,6 +1259,16 @@ const VERDICT={ok:['言えた','v-ok'],mid:['おしい','v-mid'],ng:['要復習'
 /* 一覧・表の中で判定を1語で示すときの書き方 */
 function verdictTag(v){ const [t,c]=VERDICT[v]; return `<span class="res-${c.slice(2)}">${t}</span>`; }
 function usedTag(on){ return on ? '<span class="res-ok">使えた</span>' : '<span class="res-ng">使えず</span>'; }
+/* 達成度 A〜D。★★★ ではなく文字＋4段階の色で示す */
+function gradeHtml(score){
+  const [g,c] = score>=90?['A','g-a'] : score>=70?['B','g-b'] : score>=50?['C','g-c'] : ['D','g-d'];
+  return `<div class="grade ${c}">達成度 ${g}</div>`;
+}
+/* 定着度の横棒。数字の隣に長さを出して、低い順の並びが目で追えるようにする */
+function rateHtml(r){
+  const pct=Math.round(r*100), cls = r<0.5?'lo' : r<0.8?'mid' : 'hi';
+  return `<span class="rate ${cls}"><i><b style="width:${pct}%"></b></i>${pct}%</span>`;
+}
 const SCORE_OF={ok:1, mid:0.5, ng:0};
 let cySession=[], cyIndex=0, cyStep='learn', cyResults=[];
 let cyTry1=null, cyTry2=null, cyRead=0, cyStart=0, cyAnswered=false;
@@ -1192,10 +1301,10 @@ function renderCycle(){
   document.getElementById('cy-bar').style.width=Math.round(cyIndex/cySession.length*100)+'%';
   const use=cyUse(p), f=use?TMPL_FORM[use.form]:null;
   document.getElementById('cy-chips').innerHTML=
-    `<span class="chip">${esc(funcLabel(p.func))}</span>
-     ${use?`<span class="chip">${esc(f?f.id:use.form)} ▸ ${esc(blockLabel(use.slot))}</span>`
-          :`<span class="chip">${esc(markTopicTitle(p))}</span>`}
-     <span class="chip">${esc(p.id)}</span>`;
+    `<span class="chip tag-func">${esc(funcLabel(p.func))}</span>
+     ${use?`<span class="chip tag-use">${esc(f?f.id:use.form)} ▸ ${esc(blockLabel(use.slot))}</span>`
+          :`<span class="chip tag-use">${esc(markTopicTitle(p))}</span>`}
+     <span class="chip tag-id">${esc(p.id)}</span>`;
   document.getElementById('cy-bm').checked=getPhBm().includes(p.id);
   document.getElementById('cy-fav').checked=getPhFav().includes(p.id);
   renderCycleStep();
@@ -1226,8 +1335,18 @@ function skeletonHtml(formId, here){
     return `<li class="${cls.trim()}">${esc(blockLabel(s))}</li>`;
   }).join('')+`</ul>`;
 }
+/* STEP ごとに画面のコーナー色を差し替える（カード上端・ボタン・出題枠・進捗バーが一斉に変わる）。
+   色は .steps の4色と同じ値のクラスを使い回している */
+const CY_STEP_CLS={learn:'c-phrase', try1:'c-dash', read:'c-shadow', try2:'c-mark'};
+function cyPaintStep(){
+  const sc=document.getElementById('screen-cycle');
+  if(!sc) return;
+  Object.values(CY_STEP_CLS).forEach(c=>sc.classList.remove(c));
+  sc.classList.add(CY_STEP_CLS[cyStep]||'c-phrase');
+}
 function renderCycleStep(){
   const p=cyCur();
+  cyPaintStep();
   document.getElementById('cy-steps').innerHTML=cyStepsHtml();
   const phase={learn:'STEP1 フレーズを覚える',try1:'STEP2 英訳チャレンジ（1回目）',
                read:'STEP3 答えを見て音読',try2:'STEP4 もう一度 英訳チャレンジ'}[cyStep];
@@ -1239,7 +1358,7 @@ function renderCycleStep(){
 }
 /* --- STEP1 覚える（答えの英文＝例文はまだ出さない） --- */
 function cyLearnHtml(p){
-  return `<h3><span class="stepno">1</span>このフレーズを覚える</h3>
+  return `<h3><span class="stepno s1">1</span>このフレーズを覚える</h3>
     <div class="tb"><div class="tb-form">${esc(funcLabel(p.func))}</div>
       <div class="ph-en">${esc(p.en)}</div>
       <div class="tb-note" style="font-size:.92rem;color:var(--ink);">${esc(p.ja)}</div>
@@ -1256,7 +1375,7 @@ function cyGoTry(round){ cyStep = round===1?'try1':'try2'; renderCycleStep(); }
 function cyTryHtml(p, round){
   const prev = round===2 && cyTry1 ? `<div class="small">1回目の判定: ${verdictTag(cyTry1.v)}
       ／ フレーズ ${usedTag(cyTry1.used)} ／ 内容語 ${Math.round(cyTry1.recall*100)}%</div>` : '';
-  return `<h3><span class="stepno">${round===1?2:4}</span>${round===1?'英訳チャレンジ（1回目）':'もう一度 英訳チャレンジ'}</h3>
+  return `<h3><span class="stepno ${round===1?'s2':'s4'}">${round===1?2:4}</span>${round===1?'英訳チャレンジ（1回目）':'もう一度 英訳チャレンジ'}</h3>
     ${prev}
     <div class="ja-box big-ja">${esc(p.exampleJa)}</div>
     <p class="lv-note">${round===1
@@ -1314,7 +1433,7 @@ function cyOverride(nv){
 function cyGoRead(){ cyStep='read'; renderCycleStep(); }
 function cyReadHtml(p){
   const L=cyTry1;
-  return `<h3><span class="stepno">3</span>答えの英文を見て音読する</h3>
+  return `<h3><span class="stepno s3">3</span>答えの英文を見て音読する</h3>
     <div class="answer-box">
       <button class="play" onclick="playAudio(this,'${esc(phAudioSrc(p))}')">${ICON_PLAY}</button>
       ${esc(p.example)}
@@ -1396,13 +1515,12 @@ function showCycleResults(){
   const n=cyResults.length;
   const p1=cyResults.reduce((a,r)=>a+r.s1,0), p2=cyResults.reduce((a,r)=>a+r.s2,0);
   const a=Math.round(p1/n*100), b=Math.round(p2/n*100), d=b-a;
-  const grade=b>=90?'達成度 A':(b>=70?'達成度 B':(b>=50?'達成度 C':'達成度 D'));
   const msg = d>0 ? '音読が効いています。この伸びぶんがそのまま本番で使える表現になります。'
     : (b>=90 ? 'すでに定着しています。お気に入りを付けてマイテンプレに入れておきましょう。'
              : '2回目で伸びなかったフレーズは復習リストに入れて、日を置いてもう一度回してください。');
   document.getElementById('result-body').innerHTML=`
     <div class="score">${b}<span> / 100</span></div>
-    <div class="grade">${grade}</div>
+    ${gradeHtml(b)}
     <p>実践サイクル ${n}件 ／ 1回目 <b>${a}%</b> → 2回目 <b>${b}%</b>（${d>=0?'+':''}${d} pt）
        ／ 音読 ${cyResults.reduce((x,r)=>x+r.read,0)}回</p>
     <p class="small">${esc(msg)}</p>
@@ -1467,8 +1585,8 @@ function renderPhrase(){
   document.getElementById('p-bar').style.width=Math.round(phIndex/phSession.length*100)+'%';
   document.getElementById('p-chips').innerHTML=
     `<span class="chip on">${it.kind==='recall'?'フレーズ再現':'フレーズで言う'}</span>
-     <span class="chip">${esc(funcLabel(p.func))}</span>
-     <span class="chip">${esc(f?f.id:use.form)} ▸ ${esc(blockLabel(use.slot))}</span>`;
+     <span class="chip tag-func">${esc(funcLabel(p.func))}</span>
+     <span class="chip tag-use">${esc(f?f.id:use.form)} ▸ ${esc(blockLabel(use.slot))}</span>`;
   document.getElementById('p-bm').checked=getPhBm().includes(p.id);
   document.getElementById('p-fav').checked=getPhFav().includes(p.id);
   const place=`<div class="tb"><div class="tb-form">使う場所</div>
@@ -1568,10 +1686,9 @@ function nextPhrase(){
 }
 function showPhraseResults(){
   const n=phResults.length, pts=phResults.reduce((a,r)=>a+r.score,0), score=Math.round(pts/n*100);
-  const grade=score>=90?'達成度 A':(score>=70?'達成度 B':(score>=50?'達成度 C':'達成度 D'));
   document.getElementById('result-body').innerHTML=`
     <div class="score">${score}<span> / 100</span></div>
-    <div class="grade">${grade}</div>
+    ${gradeHtml(score)}
     <p>便利フレーズ道場の結果</p>
     <table>${phResults.map((r,i)=>`<tr><td style="width:2rem;">${i+1}</td>
       <td style="width:5rem;">${verdictTag(r.score===1?'ok':(r.score===0.5?'mid':'ng'))}</td>
@@ -1680,15 +1797,15 @@ function phCardHtml(p, bm, fav, mast, where){
   const s=mast[p.id];
   return `<div class="mt-card"><span class="ph-en">${esc(p.en)}</span>
     <div class="small">${esc(p.ja)}</div>
-    <div class="chips">${(p.uses||[]).map(u=>`<span class="chip">${esc(u.form)} ▸ ${esc(blockLabel(u.slot))}</span>`).join('')
-      }${p.mark?`<span class="chip">清書前</span>`:''}${p.edited?`<span class="chip">編集ずみ</span>`:''
-      }${p.del?`<span class="chip">削除中</span>`:''}<span class="chip">追加日 ${esc(phAddedLabel(p))}</span></div>
+    <div class="chips">${(p.uses||[]).map(u=>`<span class="chip tag-use">${esc(u.form)} ▸ ${esc(blockLabel(u.slot))}</span>`).join('')
+      }${p.mark?`<span class="chip tag-mark">清書前</span>`:''}${p.edited?`<span class="chip tag-edit">編集ずみ</span>`:''
+      }${p.del?`<span class="chip weak">削除中</span>`:''}<span class="chip tag-id">追加日 ${esc(phAddedLabel(p))}</span></div>
     <div class="small">${esc(p.example)} <button class="play" onclick="playAudio(this,'${esc(phAudioSrc(p))}')">${ICON_PLAY}</button></div>
     <div class="small">${esc(p.exampleJa)}</div>
     ${phAudioNote(p)}
     ${p.tip?`<div class="small"><b>注意</b> ${esc(tipText(p.tip))}</div>`:''}
     ${(p.alts&&p.alts.length)?`<div class="small">言い換え: ${p.alts.map(esc).join(' ／ ')}</div>`:''}
-    ${s?`<div class="small">定着度 ${Math.round(s.r*100)}%（${s.n}回）</div>`:''}
+    ${s?`<div class="small">定着度 ${rateHtml(s.r)}（${s.n}回）</div>`:''}
     ${p.mark ? markOriginLinkHtml(p, false) : shPhraseLinksHtml(p.id, false)}
     <div class="btn-row">
       ${p.del
@@ -2137,7 +2254,7 @@ function renderShadowCorner(){
   document.getElementById('sh-seg-n').textContent=c.sentences;
   document.getElementById('sh-mark-n').textContent=phMarks().length;
   document.getElementById('sh-start-btns').innerHTML=
-     `<button class="btn-main" onclick="openShadow()">シャドーイングを開く</button>`
+     `<button class="btn-main" onclick="openShadow()"><i class="em">🎧</i>シャドーイングを開く</button>`
     +`<button onclick="shRandomTopic()">ランダムなトピック</button>`
     +(nw.length?`<button onclick="shOpenNew()">新しいトピック・別解（${nw.length}）</button>`:'');
   document.getElementById('sh-jump').innerHTML=
@@ -2439,7 +2556,7 @@ function renderMarkPanel(){
     const on=r&&k>=r[0]&&k<=r[1], edge=r&&(k===r[0]||k===r[1]);
     return `<span class="mk-w${on?' on':''}${edge?' edge':''}" onclick="mkTapWord(${k})">${esc(w)}</span>`;
   }).join('');
-  el.innerHTML=`<h2>気になった表現をマークする</h2>
+  el.innerHTML=`<h2><span class="ic">🌱</span>気になった表現をマークする</h2>
     <p class="small">単語をタップして<b>始まり</b>→<b>終わり</b>を選びます（1語だけなら同じ語をもう一度タップ）。
       2語以上を選ぶと、実践サイクルの判定がちょうどよくなります。</p>
     <div class="mk-words">${words}</div>
