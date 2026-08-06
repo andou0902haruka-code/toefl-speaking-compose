@@ -141,6 +141,10 @@ select.sh-sel{font-size:.88rem;padding:.4rem .5rem;border-radius:9px;border:1px 
      全フレーズが 12の型 × 5ブロック（① POSITION →⑤ WRAP-UP）に紐づいています。
      <span id="sync-status"></span> <a href="#" onclick="changeSyncId();return false;">合言葉を変更</a></p>
 
+  <p class="sub" id="update-line">
+    <button id="update-btn" onclick="updateToLatest()">🔄 最新に更新</button>
+    <span id="update-status" class="small"></span></p>
+
   <div id="daily-corner" class="card hidden">
     <h2 style="margin-top:.2rem;">📅 今日の学習コーナー</h2>
     <div id="daily-latest"></div>
@@ -392,6 +396,9 @@ const SHADOW_TOPICS      = {"music": {"title": "🎵 音楽 (Music)", "questions
 /* 🌱マークid → 清書後の💎フレーズid（build.py が useful_phrases*.json の fromMark から作る） */
 const MARK_PROMOTED      = {"Mmsfzwcqfjdw2": "S089", "Mmsfzyydqtxu3": "S090"};
 const FOLDER_KEY = "TOEFL_speaking";
+/* ビルドの版。同じ内容が version.json にも書かれていて、🔄 はこの2つを見比べる */
+const BUILD_ID = "ce369fc36dd7";
+const BUILT_AT = "2026-08-06 14:23";
 
 const TMPL_FORM = {}; TEMPLATE_MAP.forms.forEach(f=>{ TMPL_FORM[f.id]=f; });
 const TMPL_BLOCK = {}; TEMPLATE_MAP.blocks.forEach(b=>{ TMPL_BLOCK[b.id]=b; });
@@ -858,6 +865,55 @@ function recPlaybackHtml(){
   return `<div class="small" style="margin:.4rem 0;">🎧 自分の録音を聞き返す：<audio controls src="${recURL}" style="vertical-align:middle;max-width:100%;"></audio></div>`;
 }
 
+/* ================= 🔄 最新に更新（スマホのキャッシュ対策） =================
+   スマホのブラウザは一度読んだHTMLを長く持ち続けるので、こちらで作り直しても
+   古い版が開かれ続ける。version.json（数十バイト）だけキャッシュ無しで取り直して
+   版を見比べ、違っていたらURLに ?v=<版> を付けて読み直す（別URLになるので必ず新しく取れる）。
+   ⭐🔖✏️🌱や成績は localStorage と合言葉同期の側にあるので、読み直しても消えない。 */
+let _newBuild = null;
+function updateStatusEl(){ return document.getElementById('update-status'); }
+function setUpdateStatus(txt){ const el=updateStatusEl(); if(el) el.textContent = txt; }
+async function fetchBuildId(){
+  if(location.protocol==='file:') throw new Error('file');
+  if(typeof fetch!=='function') throw new Error('no-fetch');
+  const res = await fetch('version.json?_='+Date.now(), { cache:'no-store' });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return await res.json();
+}
+/* 読み込み時に静かに1回だけ見に行く。新しい版があるときだけ知らせる */
+async function checkUpdateQuietly(){
+  try{
+    const v = await fetchBuildId();
+    if(v && v.buildId && v.buildId !== BUILD_ID){
+      _newBuild = v;
+      setUpdateStatus('新しい版があります（'+(v.builtAt||'')+'）。🔄 を押すと最新になります。');
+    }
+  }catch(e){ /* オフライン等。黙って何もしない */ }
+}
+/* 🔄 を押したとき。新しければそのまま読み直す */
+async function updateToLatest(){
+  const btn=document.getElementById('update-btn');
+  if(btn) btn.disabled = true;
+  setUpdateStatus('確認中…');
+  try{
+    const v = await fetchBuildId();
+    if(v && v.buildId && v.buildId !== BUILD_ID){
+      setUpdateStatus('新しい版を読み込みます…');
+      reloadLatest(v.buildId);
+      return;
+    }
+    setUpdateStatus('最新です（'+(BUILT_AT||BUILD_ID)+'）');
+  }catch(e){
+    setUpdateStatus(location.protocol==='file:'
+      ? 'ファイルを直接開いているため確認できません（公開URLから開いてください）'
+      : '更新を確認できませんでした（通信環境を確認してください）');
+  }
+  if(btn) btn.disabled = false;
+}
+function reloadLatest(id){
+  location.replace(location.pathname + '?v=' + encodeURIComponent(id || Date.now()));
+}
+
 /* ================= スタート画面描画 ================= */
 function chipsHtml(items, cur, fn){
   return items.map(([v,l])=>`<span class="chip ${v===cur?'on':''}" onclick="${fn}('${v}')">${esc(l)}</span>`).join('');
@@ -865,6 +921,8 @@ function chipsHtml(items, cur, fn){
 function setInput(m){ inputMode=m; saveJSON(storageKey('input','_'),m); renderStart(); }
 function renderStart(){
   document.getElementById('sync-status').textContent = reviewSyncStatusLabel();
+  /* 静かな確認で新しい版が見つかっていればその案内を残し、まだなら今の版を出す */
+  if(!_newBuild && !updateStatusEl().textContent) setUpdateStatus('いまの版: '+(BUILT_AT||BUILD_ID));
   document.getElementById('input-mode-chips').innerHTML =
     chipsHtml([['speak','🎤 話す（音声認識＋録音）'],['type','⌨️ 書く（タイプ）']], inputMode, 'setInput');
   document.getElementById('input-mode-note').textContent =
@@ -2317,6 +2375,7 @@ function renderMarks(){
   syncMarkPhrases();          // クラウドから来たマークも含めて 🔁 に載せる
   const promoted=applyMarkPromotions();   // 清書済みのマークは 💎 に置き換えて片付ける
   renderStart();
+  checkUpdateQuietly();       // 古いキャッシュで開かれていたら知らせる（待たない）
   if(promoted.length) console.log(`🌱 ${promoted.length}件のマークが 💎 便利フレーズに清書されました`);
 })();
 </script>
