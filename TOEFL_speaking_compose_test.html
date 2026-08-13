@@ -244,6 +244,12 @@ details li{margin:.35rem 0;}
 .steps li:nth-child(2){--sc:var(--st2);--sc-soft:var(--st2-soft);}
 .steps li:nth-child(3){--sc:var(--st3);--sc-soft:var(--st3-soft);}
 .steps li:nth-child(4){--sc:var(--st4);--sc-soft:var(--st4-soft);}
+/* 復習の並び（STEP2 → STEP1 → STEP3 → STEP4）ではチップの位置とSTEP番号がずれるので、
+   色は位置ではなくSTEP番号に付ける（画面の色 cyPaintStep と必ず一致させるため） */
+.steps li.sc1{--sc:var(--st1);--sc-soft:var(--st1-soft);}
+.steps li.sc2{--sc:var(--st2);--sc-soft:var(--st2-soft);}
+.steps li.sc3{--sc:var(--st3);--sc-soft:var(--st3-soft);}
+.steps li.sc4{--sc:var(--st4);--sc-soft:var(--st4-soft);}
 .steps li i{display:inline-flex;align-items:center;justify-content:center;font-style:normal;
   width:20px;height:20px;border-radius:50%;background:#eceff4;color:var(--sub);font-size:.72rem;font-weight:700;}
 .steps li.here{background:var(--sc-soft);color:var(--sc);border-color:var(--sc);font-weight:700;
@@ -422,6 +428,10 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
         <span class="k1">STEP1 覚える</span> → <span class="k2">STEP2 英訳</span>（そのフレーズが使われていた日本語文。答えはまだ出ません）→
         <span class="k3">STEP3 音読</span>（答えの英文を見て読む）→ <span class="k4">STEP4 再挑戦</span>（もう一度おなじ日本語を英訳）。
         1回目と2回目の差がそのまま「言えるようになった量」です。</p>
+      <p class="small">一度解いたフレーズを <b>今日の復習・お気に入り・解いたフレーズリスト</b>から回すときは、
+        <b>先に英訳から</b>始まります（<span class="k2">STEP2</span> → <span class="k1">STEP1</span> →
+        <span class="k3">STEP3</span> → <span class="k4">STEP4</span>）。
+        思い出せないときは英訳の画面の「ヒントを表示」でフレーズを見られます。</p>
     </div>
     <div class="btn-row">
       <button id="cy-due-btn" class="btn-main" onclick="startCycle('due')"><i class="em">🔁</i>今日の復習（<span id="cy-due-count">0</span>件）</button>
@@ -692,8 +702,8 @@ const SHADOW_TOPICS      = {"music": {"title": "音楽 (Music)", "questions": {"
 const MARK_PROMOTED      = {"Mmsfzwcqfjdw2": "S089", "Mmsfzyydqtxu3": "S090"};
 const FOLDER_KEY = "TOEFL_speaking";
 /* ビルドの版。同じ内容が version.json にも書かれていて、「最新に更新」はこの2つを見比べる */
-const BUILD_ID = "795f8d282075";
-const BUILT_AT = "2026-08-12 23:40";
+const BUILD_ID = "e370909f1d72";
+const BUILT_AT = "2026-08-13 13:40";
 
 const TMPL_FORM = {}; TEMPLATE_MAP.forms.forEach(f=>{ TMPL_FORM[f.id]=f; });
 const TMPL_BLOCK = {}; TEMPLATE_MAP.blocks.forEach(b=>{ TMPL_BLOCK[b.id]=b; });
@@ -1502,6 +1512,12 @@ function renderDash(){
 /* ================= 実践サイクル ================= */
 /* STEP1 覚える → STEP2 英訳（1回目・答えは出さない）→ STEP3 答えを見て音読 → STEP4 もう一度英訳 */
 const CY_STEPS=[['learn','覚える'],['try1','英訳'],['read','音読'],['try2','再挑戦']];
+/* 一度解いたフレーズを復習するコーナー（今日の復習 / お気に入り / 解いたフレーズリスト）だけ、
+   STEP2 英訳 → STEP1 覚える → STEP3 音読 → STEP4 再挑戦 の順で回す（先に思い出してから確認する）。
+   STEP番号は並べ替えても変えない（画面のチップは 2 → 1 → 3 → 4 と出る） */
+const CY_ORDER_NORMAL=['learn','try1','read','try2'];
+const CY_ORDER_REVIEW=['try1','learn','read','try2'];
+const CY_REVIEW_MODES=['due','fav','seen','seenSelect'];
 const CY_THRESH={ok:0.60, mid:0.35};
 function judgeCycle(used, recall){
   if(used && recall>=CY_THRESH.ok) return 'ok';
@@ -1526,6 +1542,7 @@ function rateHtml(r){
 const SCORE_OF={ok:1, mid:0.5, ng:0};
 let cySession=[], cyIndex=0, cyStep='learn', cyResults=[];
 let cyTry1=null, cyTry2=null, cyRead=0, cyStart=0, cyAnswered=false;
+let cyMode='random', cyReview=false, cyHinted=false;
 
 function cyPool(mode){
   const done=getCyStats().ph||{}, mast=phraseMastery();
@@ -1543,16 +1560,35 @@ function startCycle(mode, count, list){
   /* 直近に出したフレーズは後回しにして選ぶ（同じフレーズばかり当たらないようにする） */
   cySession = pickAvoidingRecent(src, count||src.length);
   pushRecent(cySession.map(p=>p.id), src.length);
-  cyIndex=0; cyResults=[];
+  cyIndex=0; cyResults=[]; cyMode=mode;
   lastRun = ()=>startCycle(mode, count, list);
   showScreen('screen-cycle'); renderCycle();
 }
-function startCycleOne(id){ const p=PH_BY_ID[id]; if(p) startCycle('one',1,[p]); }
+/* 1件だけ回す。どのコーナーから入ったかで並びが変わるので、復習のリストから呼ぶときは mode を渡す */
+function startCycleOne(id, mode){ const p=PH_BY_ID[id]; if(p) startCycle(mode||'one',1,[p]); }
 function cyCur(){ return cySession[cyIndex]; }
 function cyUse(p){ return (p.uses||[])[0] || null; }   /* マークはテンプレ上の置き場所を持たない */
+/* 復習のコーナー ＋ 一度でも解いたフレーズ のときだけ英訳から始める。
+   同じコーナーでも「まだ解いていないフレーズ」は覚えるところから（思い出しようがないため） */
+function cyIsReview(p){
+  return CY_REVIEW_MODES.indexOf(cyMode)>=0 && getPhSeen().indexOf(p.id)>=0;
+}
+function cyOrderList(){ return cyReview ? CY_ORDER_REVIEW : CY_ORDER_NORMAL; }
+function cyStepAfter(step){ const o=cyOrderList(); return o[o.indexOf(step)+1] || null; }
+/* 次のSTEPへ進むボタン。並びで行き先もラベルも変わるので1か所で作る */
+function cyNextStepBtn(from){
+  const nx=cyStepAfter(from);
+  if(!nx) return '';
+  const go={learn:['cyGoLearn()','STEP1 フレーズを確認する →'],
+            try1 :['cyGoTry(1)','STEP2 英訳にすすむ →'],
+            read :['cyGoRead()','STEP3 答えを見て音読する →'],
+            try2 :['cyGoTry(2)','STEP4 もう一度 英訳に挑戦 →']}[nx];
+  return `<button class="btn-main" onclick="${go[0]}">${go[1]}</button>`;
+}
 function renderCycle(){
   const p=cyCur();
-  cyStep='learn'; cyTry1=null; cyTry2=null; cyRead=0; cyAnswered=false;
+  cyReview=cyIsReview(p);
+  cyStep=cyOrderList()[0]; cyTry1=null; cyTry2=null; cyRead=0; cyAnswered=false; cyHinted=false;
   document.getElementById('cy-progress').textContent=`フレーズ ${cyIndex+1} / ${cySession.length}`;
   document.getElementById('cy-bar').style.width=Math.round(cyIndex/cySession.length*100)+'%';
   const use=cyUse(p), f=use?TMPL_FORM[use.form]:null;
@@ -1565,10 +1601,14 @@ function renderCycle(){
   renderCycleStep();
 }
 function toggleCycleFav(){ setPhList(PHRASE_FAV_KEY, cyCur().id); }
+/* 並べ替えても STEP番号は動かさない（復習の並びでは 2 → 1 → 3 → 4 と出る）。
+   番号が入れ替わると、画面の見出し（STEP2 英訳…）やダッシュボードの呼び方と食い違う */
 function cyStepsHtml(){
-  const at=CY_STEPS.findIndex(s=>s[0]===cyStep);
-  return CY_STEPS.map((s,i)=>
-    `<li class="${i===at?'here':(i<at?'done':'')}"><i>${i+1}</i>${esc(s[1])}</li>`).join('');
+  const order=cyOrderList(), at=order.indexOf(cyStep);
+  return order.map((k,i)=>{
+    const no=CY_STEPS.findIndex(s=>s[0]===k)+1, label=(CY_STEPS.find(s=>s[0]===k)||[,''])[1];
+    return `<li class="sc${no} ${i===at?'here':(i<at?'done':'')}"><i>${no}</i>${esc(label)}</li>`;
+  }).join('');
 }
 function cyPlaceHtml(p){
   if(p.mark) return markPlaceHtml(p);   /* マークは「型のどこ」ではなく「どの模範解答から拾ったか」を出す */
@@ -1611,32 +1651,57 @@ function renderCycleStep(){
   if(cyStep==='try1'||cyStep==='try2'){ cyStart=Date.now(); cyAnswered=false; }
 }
 /* --- STEP1 覚える（答えの英文＝例文はまだ出さない） --- */
-function cyLearnHtml(p){
-  return `<h3><span class="stepno s1">1</span>このフレーズを覚える</h3>
-    <div class="tb"><div class="tb-form">${esc(funcLabel(p.func))}</div>
+/* フレーズそのもの。STEP1 と STEP2 のヒントで同じものを出す（どちらも example・alts は含まない） */
+function cyPhraseCardHtml(p){
+  return `<div class="tb"><div class="tb-form">${esc(funcLabel(p.func))}</div>
       <div class="ph-en">${esc(p.en)}</div>
       <div class="tb-note" style="font-size:.92rem;color:var(--ink);">${esc(p.ja)}</div>
       ${p.shape?`<div class="tb-note">続く形は【${esc(p.shape)}】</div>`:''}
-      ${p.tip?`<div class="tb-note"><b>注意</b><br>${esc(tipText(p.tip))}</div>`:''}</div>
+      ${p.tip?`<div class="tb-note"><b>注意</b><br>${esc(tipText(p.tip))}</div>`:''}</div>`;
+}
+function cyGoLearn(){ cyStep='learn'; renderCycleStep(); }
+function cyLearnHtml(p){
+  const next = cyStepAfter('learn')==='read'
+    ? 'このあと <b>STEP3</b> で答えの英文を見て音読します。'
+    : (p.mark
+      ? '次は「この表現が出てきた文」の日本語を英訳します（答えの英文はまだ出ません）。'
+      : '次は「このフレーズが使われていた日本語の文」を英訳します（答えの英文はまだ出ません）。');
+  return `<h3><span class="stepno s1">1</span>このフレーズを覚える</h3>
+    ${cyReview?'<p class="lv-note">さっき英訳したフレーズの<b>形をここで確かめます</b>。</p>':''}
+    ${cyPhraseCardHtml(p)}
     ${cyPlaceHtml(p)}
-    <p class="lv-note">${p.mark
-      ? '自分でマークした表現です。<b>声に出して3回</b>言ってから次へ。次は「この表現が出てきた文」の日本語を英訳します（答えの英文はまだ出ません）。'
-      : '【　】の中は自分の言葉で埋めます。<b>声に出して3回</b>言ってから次へ。次は「このフレーズが使われていた日本語の文」を英訳します（答えの英文はまだ出ません）。'}</p>
-    <div class="btn-row"><button class="btn-main" onclick="cyGoTry(1)">覚えた → STEP2 英訳にすすむ</button></div>`;
+    <p class="lv-note">${p.mark?'自分でマークした表現です。':'【　】の中は自分の言葉で埋めます。'}<b>声に出して3回</b>言ってから次へ。${next}</p>
+    <div class="btn-row">${cyNextStepBtn('learn')}</div>`;
 }
 /* --- STEP2 / STEP4 英訳チャレンジ --- */
 function cyGoTry(round){ cyStep = round===1?'try1':'try2'; renderCycleStep(); }
+/* STEP2 のヒント。押すまでフレーズを出さない（復習の並びでは、思い出す前に形を見せない）。
+   出すのは STEP1 と同じ範囲＝en / ja / shape / tip だけで、example と alts は STEP3 まで出さない */
+function cyHintHtml(){
+  return `<div class="btn-row" id="cy-hint-row"><button onclick="cyShowHint()">${
+      cyReview?'ヒントを表示（学習するフレーズを見る）':'ヒントを表示（さっき覚えたフレーズ）'}</button></div>
+    <div id="cy-hint"></div>`;
+}
+function cyShowHint(){
+  cyHinted=true;
+  const row=document.getElementById('cy-hint-row'); if(row) row.innerHTML='';
+  const box=document.getElementById('cy-hint'); if(box) box.innerHTML=cyPhraseCardHtml(cyCur());
+}
 function cyTryHtml(p, round){
   const prev = round===2 && cyTry1 ? `<div class="small">1回目の判定: ${verdictTag(cyTry1.v)}
       ／ フレーズ ${usedTag(cyTry1.used)} ／ 内容語 ${Math.round(cyTry1.recall*100)}%</div>` : '';
+  const note = round===2
+    ? '音読した英文を思い出しながら、もう一度<b>見ないで</b>言ってください。ここが今日の伸びしろです。'
+    : (cyReview
+      ? '一度解いたことのあるフレーズです。<b>まず思い出して</b>この日本語を英語で言ってください（このあと STEP1 でフレーズ、STEP3 で答えの英文が出ます）。思い出せないときは下の「ヒントを表示」を押してください。'
+      : 'さっき覚えたフレーズを<b>必ず使って</b>、この日本語を英語で言ってください。答えの英文はこのあと STEP3 で出ます。');
   return `<h3><span class="stepno ${round===1?'s2':'s4'}">${round===1?2:4}</span>${round===1?'英訳チャレンジ（1回目）':'もう一度 英訳チャレンジ'}</h3>
     ${prev}
     <div class="ja-box big-ja">${esc(p.exampleJa)}</div>
-    <p class="lv-note">${round===1
-      ? 'さっき覚えたフレーズを<b>必ず使って</b>、この日本語を英語で言ってください。答えの英文はこのあと STEP3 で出ます。'
-      : '音読した英文を思い出しながら、もう一度<b>見ないで</b>言ってください。ここが今日の伸びしろです。'}</p>
-    <details><summary>使うフレーズをもう一度見る</summary>
-      <div class="ph-en">${esc(p.en)}</div><div class="small">${esc(p.ja)}</div></details>
+    <p class="lv-note">${note}</p>
+    ${round===1 ? cyHintHtml()
+      : `<details><summary>使うフレーズをもう一度見る</summary>
+      <div class="ph-en">${esc(p.en)}</div><div class="small">${esc(p.ja)}</div></details>`}
     ${answerInputHtml('cy',3,'話した内容（またはタイプした英文）','cySubmitTry()','採点する（⌘/Ctrl+Enter）')}
     <div id="cy-fb"></div>`;
 }
@@ -1660,15 +1725,17 @@ function renderCycleTry1Feedback(){
   document.getElementById('cy-fb').innerHTML=`
     <div class="verdict ${cls}">${txt}</div>
     <div class="small">フレーズ: ${L.used?'<span class="res-ok">使えています</span>':'<span class="res-ng">使えていません</span>'}
-      ／ 内容語の再現 ${Math.round(L.recall*100)}% ／ ${L.sec}秒</div>
+      ／ 内容語の再現 ${Math.round(L.recall*100)}% ／ ${L.sec}秒${cyHinted?' ／ ヒントを見て解答':''}</div>
     <div class="btn-row"><span class="small">自己採点で上書き：</span>
       <button onclick="cyOverride('ok')">言えた</button>
       <button onclick="cyOverride('mid')">惜しい</button>
       <button onclick="cyOverride('ng')">言えなかった</button></div>
     <h3>あなたの英語</h3><div class="mono" style="font-size:.9rem;">${esc(L.user)}</div>
     ${recPlaybackHtml()}
-    <p class="lv-note">答えの英文は次の STEP3 で出ます。ここで見比べて終わりにせず、<b>音読してから STEP4 でもう一度</b>言うのがこのコーナーの狙いです。</p>
-    <div class="btn-row"><button class="btn-main" onclick="cyGoRead()">STEP3 答えを見て音読する →</button></div>`;
+    <p class="lv-note">${cyStepAfter('try1')==='learn'
+      ? '次の <b>STEP1</b> でフレーズの形を確かめ、<b>STEP3</b> で答えの英文を見て音読します。答えを見て終わりにせず、<b>STEP4 でもう一度</b>言うところまで通してください。'
+      : '答えの英文は次の STEP3 で出ます。ここで見比べて終わりにせず、<b>音読してから STEP4 でもう一度</b>言うのがこのコーナーの狙いです。'}</p>
+    <div class="btn-row">${cyNextStepBtn('try1')}</div>`;
 }
 /* STEP2 の上書きは記録前なので値を差し替えるだけでよい。
    STEP4 は finishCycleItem で記録済みなので、直前の記録を取り消してから付け直す */
@@ -2019,7 +2086,7 @@ function openPhraseFav(){
         <span class="ph-en">${esc(p.en)}</span>
         <div class="small">${esc(p.ja)}</div>
         <div class="btn-row">
-          <button onclick="startCycleOne('${p.id}')">実践サイクル</button>
+          <button onclick="startCycleOne('${p.id}','fav')">実践サイクル</button>
           <button onclick="setPhList(PHRASE_FAV_KEY,'${p.id}');openPhraseFav();">お気に入りを外す</button>
         </div></div>`).join('')+`</div>`:'') +
     `<h2><span class="stepno">2</span>マイテンプレ</h2>` +
@@ -2034,7 +2101,7 @@ function openPhraseFav(){
                 <span class="ph-en">${esc(p.en)}</span>
                 <div class="small">${esc(p.ja)}／${esc(p.example)}</div>
                 <div class="btn-row">
-                  <button onclick="startCycleOne('${p.id}')">実践サイクル</button>
+                  <button onclick="startCycleOne('${p.id}','fav')">実践サイクル</button>
                   <button onclick="setPhList(PHRASE_FAV_KEY,'${p.id}');openPhraseFav();">お気に入りを外す</button>
                 </div></div>`).join('')
               : `<div class="small">まだお気に入りがありません（${esc(TMPL_BLOCK[s].role)}）</div>`);
@@ -2076,7 +2143,7 @@ function renderPhraseSeen(){
             <span class="small" style="display:block;">${esc(p.ja)}</span>
             <span class="small" style="display:block;">${s?`定着度 ${rateHtml(s.r)}（${s.n}回）`:'記録なし'}${
               box?` ／ 復習箱 ${box.box}（次回 ${esc(box.due||'—')}）`:''}</span>
-            <span class="btn-row"><button onclick="startCycleOne('${p.id}')">このフレーズだけ回す</button></span>
+            <span class="btn-row"><button onclick="startCycleOne('${p.id}','seen')">このフレーズだけ回す</button></span>
           </span></label>`;
       }).join('')
     : `<div class="card"><p class="small">まだ解いたフレーズがありません。
