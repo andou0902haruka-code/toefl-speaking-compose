@@ -257,6 +257,8 @@ details li{margin:.35rem 0;}
 .steps li.here i{background:var(--sc);color:#fff;}
 .steps li.done{background:var(--sc-soft);color:var(--sc);border-color:var(--sc-soft);}
 .steps li.done i{background:var(--sc);color:#fff;}
+/* STEP2 で切り上げたときに、行わなかったSTEPを薄く出す（どこで終えたかを画面に残す） */
+.steps li.skip{opacity:.42;border-style:dashed;}
 
 /* ---------- 表 ---------- */
 table{width:100%;border-collapse:collapse;font-size:.86rem;margin:6px 0 4px;}
@@ -314,6 +316,12 @@ tr:last-child td{border-bottom:none;}
 .sh-stage .sh-en{font-size:1.15rem;font-weight:600;line-height:1.8;}
 .sh-stage .sh-ja{font-size:.98rem;color:var(--sub);}
 .sh-hint{color:var(--mute);font-size:.88rem;}
+/* 読み上げの並び「日本語1回 → 英語2回」のいま鳴っているところ */
+.sh-legs{display:flex;flex-wrap:wrap;gap:6px;}
+.sh-leg{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:999px;
+  border:1px solid var(--line-strong);background:#fff;color:var(--mute);}
+.sh-leg.on{background:var(--corner-soft,var(--accent-soft));color:var(--corner,var(--accent));
+  border-color:var(--corner-line,var(--accent-line));}
 .sh-ctrl{border:1px solid var(--corner,var(--accent));background:var(--corner,var(--accent));color:#fff;
   border-radius:50%;width:46px;height:46px;
   padding:0;display:inline-flex;align-items:center;justify-content:center;}
@@ -357,6 +365,12 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
   font-family:var(--mono);font-weight:700;min-height:2.6rem;}
 .mk-memo{width:100%;font-family:inherit;font-size:.9rem;padding:10px 12px;
   border:1.5px solid var(--line-strong);border-radius:8px;margin-top:8px;}
+/* マークはセリフのすぐ下に開く（ステージの文の下／スクリプト全文の各行の下） */
+.mk-inline{margin-top:10px;padding:12px 14px;border:1px solid var(--c-mark-line);
+  border-left:3px solid var(--c-mark);border-radius:10px;background:var(--c-mark-soft);
+  cursor:default;text-align:left;}
+.mk-inline .mk-head{font-size:.8rem;font-weight:700;color:var(--c-mark);}
+.mk-inline .mk-words{margin:8px 0;}
 
 /* ---------- 結果 ---------- */
 .score{font-size:2.6rem;font-weight:700;letter-spacing:-.02em;color:var(--corner,var(--accent));margin:6px 0 2px;}
@@ -379,6 +393,17 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
   .ic{width:27px;height:27px;font-size:.88rem;}
   body{font-size:15px;}
 }
+  /* 今日の復習: つかう時間チップ・件数・この先7日の予定 */
+  .rev-min-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:8px 0 0;
+    font-size:.78rem;color:var(--muted);}
+  .rev-min{border:1px solid var(--line);background:var(--card);color:var(--muted);
+    border-radius:999px;padding:3px 11px;font-size:.78rem;cursor:pointer;font-family:inherit;}
+  .rev-min.on{border-color:var(--corner,var(--accent));background:var(--corner-soft,rgba(0,0,0,.04));
+    color:var(--corner,var(--accent));font-weight:700;}
+  .due-num{font-weight:700;color:var(--corner,var(--accent));}
+  .due-fc{display:inline-flex;align-items:flex-end;gap:3px;margin-left:10px;font-size:.74rem;color:var(--muted);}
+  .due-fc i{display:inline-block;width:7px;background:var(--corner,var(--accent));opacity:.45;border-radius:2px 2px 0 0;}
+  .due-fc i.over{opacity:.9;background:#d9534f;}
 </style>
 </head>
 <body>
@@ -432,10 +457,15 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
         <b>先に英訳から</b>始まります（<span class="k2">STEP2</span> → <span class="k1">STEP1</span> →
         <span class="k3">STEP3</span> → <span class="k4">STEP4</span>）。
         思い出せないときは英訳の画面の「ヒントを表示」でフレーズを見られます。</p>
+      <p class="small">この並びのときは、<b>STEP2 の答え合わせのあとで「続けるか / ここで終わりにするか」を選べます</b>。
+        終わりにしても答えは確認でき、その判定は今日の復習に残ります
+        （音読と2回目の英訳をしていないので、累計成績の「1回目 → 2回目」には入りません）。</p>
     </div>
     <div class="btn-row">
       <button id="cy-due-btn" class="btn-main" onclick="startCycle('due')"><i class="em">🔁</i>今日の復習（<span id="cy-due-count">0</span>件）</button>
     </div>
+    <p class="small" id="cy-due-label"></p>
+    <div id="cy-due-min"></div>
     <p class="group-label">ランダムに回す</p>
     <div class="btn-row" id="cy-random-btns"></div>
     <p class="group-label">対象をしぼる</p>
@@ -659,17 +689,18 @@ select.sh-sel{font-size:.9rem;padding:9px 12px;border-radius:var(--radius-sm);bo
     <div class="chips" id="sh-caption"></div>
     <div class="sh-stage" id="sh-stage"></div>
     <div class="btn-row" style="align-items:center;" id="sh-transport"></div>
+    <p class="group-label">読み上げの並び</p>
+    <div class="chips" id="sh-read"></div>
     <p class="group-label">再生モード</p>
     <div class="chips" id="sh-playmode"></div>
     <div class="chips" style="margin-top:8px;" id="sh-after"></div>
     <div class="chips hidden" style="margin-top:8px;" id="sh-nextver"></div>
   </div>
 
-  <div class="card corner c-mark hidden" id="sh-mark"></div>
-
   <div class="card">
     <h2><span class="ic">📄</span>スクリプト全文</h2>
-    <p class="small">文をクリックするとそこから再生します。右端の「マーク」から気になった表現を拾えます。</p>
+    <p class="small">文をクリックするとそこから再生します。右端の「マーク」を押すと、
+      その<b>セリフのすぐ下</b>で気になった表現を拾えます。</p>
     <div id="sh-transcript"></div>
   </div>
 </div>
@@ -702,8 +733,8 @@ const SHADOW_TOPICS      = {"music": {"title": "音楽 (Music)", "questions": {"
 const MARK_PROMOTED      = {"Mmsfzwcqfjdw2": "S089", "Mmsfzyydqtxu3": "S090"};
 const FOLDER_KEY = "TOEFL_speaking";
 /* ビルドの版。同じ内容が version.json にも書かれていて、「最新に更新」はこの2つを見比べる */
-const BUILD_ID = "85660df388e8";
-const BUILT_AT = "2026-08-13 22:33";
+const BUILD_ID = "67164118f3ac";
+const BUILT_AT = "2026-08-27 13:03";
 
 const TMPL_FORM = {}; TEMPLATE_MAP.forms.forEach(f=>{ TMPL_FORM[f.id]=f; });
 const TMPL_BLOCK = {}; TEMPLATE_MAP.blocks.forEach(b=>{ TMPL_BLOCK[b.id]=b; });
@@ -1031,21 +1062,112 @@ function pickAvoidingRecent(items, count){
 }
 function localToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function addDays(n){ const d=new Date(); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-const SRS_DAYS={1:0,2:2,3:5,4:14};
+/* 復習の箱は6段。2026-08-27に 4段（最大14日）から広げた。
+   4段だと、言えるようになったフレーズでも14日ごとに必ず全部戻ってくるので、
+   フレーズが増えるほど「今日の復習」が構造的に溢れる（250件なら毎日18件が下限）。
+   12→30→60日の段を足すと平均間隔がおよそ2倍になり、空いた枠を
+   「前回言えなかったフレーズ」に回せる。下の1日あたりの上限を成立させるための前提。
+   これまでの記録は箱1〜4のままなので、そのまま続きから伸びていく。 */
+const SRS_DAYS={1:0,2:2,3:5,4:12,5:30,6:60};
+const BOX_MAX=6;
 function getPhSrs(){ return loadJSON(PH_SRS_KEY,{}); }
+/* 予定日のならし。同じ日に解いたものは同じ日に戻ってくるので、放っておくと
+   「ある日だけ80件、次の日は0件」という山ができる。次の期限を決めるとき、
+   その前後で予定がいちばん空いている日を選んでおくと、1日あたりの件数がならされる。
+   言えなかった直後（箱1・2）はずらさない。今すぐ出さないと消えてしまうため。 */
+function spreadDue(box, srs, skipId){
+  const off=SRS_DAYS[box]||0;
+  const win = off>=30 ? 3 : (off>=12 ? 2 : (off>=5 ? 1 : 0));
+  if(!win) return addDays(off);
+  const load={};
+  Object.keys(srs).forEach(k=>{ if(k!==String(skipId) && srs[k] && srs[k].due) load[srs[k].due]=(load[srs[k].due]||0)+1; });
+  let best=addDays(off), bestN=load[best]||0;
+  for(let d=-win; d<=win; d++){
+    if(d===0 || off+d<1) continue;
+    const t=addDays(off+d), n=load[t]||0;
+    if(n<bestN){ best=t; bestN=n; }
+  }
+  return best;
+}
 function updatePhSrs(id, score){
   const s=getPhSrs(), cur=s[id]||{box:1};
   let box=cur.box||1;
-  if(score===1) box=Math.min(4,box+1);
+  if(score===1) box=Math.min(BOX_MAX,box+1);
   else if(score===0.5) box=Math.max(2,Math.min(3,box));
   else box=1;
-  s[id]={box, due:addDays(SRS_DAYS[box])};
+  s[id]={box, due:spreadDue(box,s,id)};
   saveJSON(PH_SRS_KEY,s); reviewSyncPush(PH_SRS_KEY);
 }
 function phDueIds(){
   const s=getPhSrs(), t=localToday(), out=[];
   Object.keys(s).forEach(k=>{ if(PH_BY_ID[k] && !PH_BY_ID[k].del && (!s[k].due || s[k].due<=t)) out.push(k); });
   return out;
+}
+
+/* ================= 1日あたりの復習の上限（2026-08-27 追加） =================
+   期限が来たものを全部出していると、フレーズが増えるほど1日の復習が膨らんで回らなくなる。
+   「今日つかう時間」を決めて、そのぶんの件数だけ出す。溢れたぶんは翌日以降に回る。
+   何を落とすかが肝で、箱が低いもの（＝前回言えなかった＝いちばん早く消える）から先に出す。
+   箱が高いものは数日ずれても壊れないので、後回しにしても記憶は保てる。 */
+const REVIEW_MIN_KEY  = `sc_revmin_${FOLDER_KEY}`;    /* 今日つかう時間（分） */
+const REVIEW_PACE_KEY = `sc_revpace_${FOLDER_KEY}`;   /* 1件あたりの実測秒（端末ごと） */
+const REVIEW_MIN_CHOICES=[10,15,20,30];
+const REVIEW_MIN_DEFAULT=30;
+const PACE_DEFAULT=130;   /* 1フレーズあたりの初期値（秒）。実測が3回たまると置き換わる */
+function reviewMinutes(){
+  const v=loadJSON(REVIEW_MIN_KEY, REVIEW_MIN_DEFAULT);
+  return REVIEW_MIN_CHOICES.indexOf(v)>=0 ? v : REVIEW_MIN_DEFAULT;
+}
+function setReviewMinutes(m){ saveJSON(REVIEW_MIN_KEY,m); renderStart(); }
+/* 1件あたりの秒数は実測の中央値。ただし画面を開きっぱなしにした回が混ざると
+   一気に狂うので、標本は初期値の 0.3〜3倍に丸めてから貯める */
+function pushPace(seconds, items){
+  if(!items || !(seconds>0)) return;
+  const per=Math.min(PACE_DEFAULT*3, Math.max(PACE_DEFAULT*0.3, seconds/items));
+  const l=loadJSON(REVIEW_PACE_KEY,[]);
+  saveJSON(REVIEW_PACE_KEY, (Array.isArray(l)?l:[]).concat(Math.round(per)).slice(-10));
+}
+function paceOf(){
+  const l=loadJSON(REVIEW_PACE_KEY,[]), a=(Array.isArray(l)?l:[]).slice().sort((x,y)=>x-y);
+  return a.length<3 ? PACE_DEFAULT : a[Math.floor(a.length/2)];
+}
+function reviewCap(){ return Math.max(3, Math.round(reviewMinutes()*60/paceOf())); }
+function overdueDays(due){
+  if(!due) return 0;
+  return Math.max(0, Math.round((new Date(localToday())-new Date(due))/86400000));
+}
+/* 上限に収める順番＝忘れかけている順。箱が低いほど先。
+   ただし箱が高くても期限を2週間以上過ぎていれば、さすがに忘れているとみなして箱2相当まで前に出す */
+function riskRank(e){
+  const box=(e&&e.box)||1;
+  return overdueDays(e&&e.due)>=14 ? Math.min(box,2) : box;
+}
+function capDue(list){
+  const s=getPhSrs();
+  return list.slice().sort((a,b)=>{
+    const ea=s[a.id]||{}, eb=s[b.id]||{}, ra=riskRank(ea), rb=riskRank(eb);
+    if(ra!==rb) return ra-rb;
+    return String(ea.due||'').localeCompare(String(eb.due||''));
+  }).slice(0, reviewCap());
+}
+function reviewMinChipsHtml(){
+  const cur=reviewMinutes();
+  return `<div class="rev-min-row">今日つかう時間: `
+    + REVIEW_MIN_CHOICES.map(m=>`<button class="rev-min${m===cur?' on':''}" onclick="setReviewMinutes(${m})">${m}分</button>`).join('')
+    + `</div>`;
+}
+/* 期限が来た件数・今日出す件数・この先7日の予定 */
+function dueSummaryHtml(due){
+  const s=getPhSrs(), cap=reviewCap(), show=Math.min(due.length,cap), rest=due.length-show;
+  const over=due.filter(p=>overdueDays((s[p.id]||{}).due)>=1).length;
+  const fc=[];
+  for(let i=1;i<=7;i++){ const d=addDays(i); fc.push({d, n:Object.keys(s).filter(k=>s[k]&&s[k].due===d).length}); }
+  const mx=Math.max(cap, ...fc.map(x=>x.n), 1);
+  return `<span class="due-num">今日は ${show}件</span>`
+    + `（期限が来たのは ${due.length}件${over?`・うち繰越 ${over}件`:''}`
+    + (rest?`／残り ${rest}件は翌日以降`:'') + `）`
+    + `<span class="due-fc">この先7日: ${fc.map(x=>
+        `<i class="${x.n>cap?'over':''}" style="height:${Math.max(2,Math.round(x.n/mx*18))}px" title="${x.d} ${x.n}件"></i>`).join('')}</span>`;
 }
 /* 道場（1回勝負）とサイクル（2回目＝定着後）を合算した、フレーズ1件ごとの定着度 */
 function phraseMastery(){
@@ -1416,9 +1538,16 @@ function renderStart(){
       <div class="small">${esc(asrDiagText())}</div>
       <ul class="small">${ASR_TIPS.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`;
 
-  const due=phDueIds();
-  document.getElementById('cy-due-count').textContent = due.length;
+  const due=phDueIds().map(id=>PH_BY_ID[id]).filter(Boolean);
+  const dueToday=capDue(due);
+  document.getElementById('cy-due-count').textContent = dueToday.length;
   document.getElementById('cy-due-btn').disabled = due.length===0;
+  document.getElementById('cy-due-label').innerHTML = due.length
+    ? dueSummaryHtml(due)
+      + `<br>言えたフレーズは +2→+5→+12→+30→+60日 と間隔が伸びます。`
+      + `1回で出すのは選んだ時間に収まる件数までで、残りは翌日以降に回ります。`
+    : '期限が来たフレーズはありません。実践サイクルを回すと、忘れる頃にここへ戻ってきます。';
+  document.getElementById('cy-due-min').innerHTML = reviewMinChipsHtml();
   document.getElementById('cy-random-btns').innerHTML =
     [3,5,10,20].map(n=>`<button onclick="startCycle('random',${n})">${n}件</button>`).join('');
   const done=getCyStats().ph||{}, fresh=phLive().filter(p=>!done[p.id]);
@@ -1514,7 +1643,9 @@ function renderDash(){
 const CY_STEPS=[['learn','覚える'],['try1','英訳'],['read','音読'],['try2','再挑戦']];
 /* 一度解いたフレーズを復習するコーナー（今日の復習 / お気に入り / 解いたフレーズリスト）だけ、
    STEP2 英訳 → STEP1 覚える → STEP3 音読 → STEP4 再挑戦 の順で回す（先に思い出してから確認する）。
-   STEP番号は並べ替えても変えない（画面のチップは 2 → 1 → 3 → 4 と出る） */
+   STEP番号は並べ替えても変えない（画面のチップは 2 → 1 → 3 → 4 と出る）。
+   この並びのときだけ、STEP2 の答え合わせのあとに「STEP1・3・4 まで続けるか / ここで終わるか」を選べる
+   （言えたフレーズに毎回4ステップを課さないため。finishCycleShort が短いほうの道） */
 const CY_ORDER_NORMAL=['learn','try1','read','try2'];
 const CY_ORDER_REVIEW=['try1','learn','read','try2'];
 const CY_REVIEW_MODES=['due','fav','seen','seenSelect'];
@@ -1542,7 +1673,9 @@ function rateHtml(r){
 const SCORE_OF={ok:1, mid:0.5, ng:0};
 let cySession=[], cyIndex=0, cyStep='learn', cyResults=[];
 let cyTry1=null, cyTry2=null, cyRead=0, cyStart=0, cyAnswered=false;
-let cyMode='random', cyReview=false, cyHinted=false;
+let cyMode='random', cyReview=false, cyHinted=false, cyShort=false, cyShortPrevSrs=null;
+/* おかわり（同じセッションでの出し直し）と、1件あたりの実測用のセッション開始時刻 */
+let cyAgain=false, cySesT0=0;
 
 function cyPool(mode){
   const done=getCyStats().ph||{}, mast=phraseMastery();
@@ -1555,12 +1688,14 @@ function cyPool(mode){
   return phLive();
 }
 function startCycle(mode, count, list){
-  const src = list || cyPool(mode);
+  let src = list || cyPool(mode);
   if(!src.length){ alert('対象のフレーズがありません。'); return; }
+  /* 今日の復習は1日ぶんに切る。落とすのは箱が高い（＝しばらく持つ）フレーズから */
+  if(mode==='due' && !list) src = capDue(src);
   /* 直近に出したフレーズは後回しにして選ぶ（同じフレーズばかり当たらないようにする） */
   cySession = pickAvoidingRecent(src, count||src.length);
   pushRecent(cySession.map(p=>p.id), src.length);
-  cyIndex=0; cyResults=[]; cyMode=mode;
+  cyIndex=0; cyResults=[]; cyMode=mode; cySesT0=Date.now();
   lastRun = ()=>startCycle(mode, count, list);
   showScreen('screen-cycle'); renderCycle();
 }
@@ -1573,24 +1708,32 @@ function cyUse(p){ return (p.uses||[])[0] || null; }   /* マークはテンプ�
 function cyIsReview(p){
   return CY_REVIEW_MODES.indexOf(cyMode)>=0 && getPhSeen().indexOf(p.id)>=0;
 }
-function cyOrderList(){ return cyReview ? CY_ORDER_REVIEW : CY_ORDER_NORMAL; }
+/* おかわりは英訳1回だけ（4ステップ通すと時間の上限を作った意味がなくなる） */
+const CY_ORDER_AGAIN=['try1'];
+function cyOrderList(){ return cyAgain ? CY_ORDER_AGAIN : (cyReview ? CY_ORDER_REVIEW : CY_ORDER_NORMAL); }
 function cyStepAfter(step){ const o=cyOrderList(); return o[o.indexOf(step)+1] || null; }
-/* 次のSTEPへ進むボタン。並びで行き先もラベルも変わるので1か所で作る */
-function cyNextStepBtn(from){
+/* 次のSTEPへ進むボタン。並びで行き先もラベルも変わるので1か所で作る。
+   main=false にすると「おすすめではないほう」の見た目になる（復習の並びで道が2つに分かれるときだけ使う） */
+function cyNextStepBtn(from, main){
   const nx=cyStepAfter(from);
   if(!nx) return '';
   const go={learn:['cyGoLearn()','STEP1 フレーズを確認する →'],
             try1 :['cyGoTry(1)','STEP2 英訳にすすむ →'],
             read :['cyGoRead()','STEP3 答えを見て音読する →'],
             try2 :['cyGoTry(2)','STEP4 もう一度 英訳に挑戦 →']}[nx];
-  return `<button class="btn-main" onclick="${go[0]}">${go[1]}</button>`;
+  return `<button ${main===false?'':'class="btn-main" '}onclick="${go[0]}">${go[1]}</button>`;
 }
 function renderCycle(){
   const p=cyCur();
+  cyAgain=!!p._again;
   cyReview=cyIsReview(p);
   cyStep=cyOrderList()[0]; cyTry1=null; cyTry2=null; cyRead=0; cyAnswered=false; cyHinted=false;
-  document.getElementById('cy-progress').textContent=`フレーズ ${cyIndex+1} / ${cySession.length}`;
-  document.getElementById('cy-bar').style.width=Math.round(cyIndex/cySession.length*100)+'%';
+  cyShort=false; cyShortPrevSrs=null;
+  /* おかわりを後ろに足しても「◯/◯件」の分母は動かさない（本編の件数だけを数える） */
+  const cyN=cySession.filter(x=>!x._again).length || cySession.length;
+  document.getElementById('cy-progress').textContent = cyAgain
+    ? 'もう一度（この1問は記録に入りません）' : `フレーズ ${cyIndex+1} / ${cyN}`;
+  document.getElementById('cy-bar').style.width=Math.round(Math.min(1,cyIndex/cyN)*100)+'%';
   const use=cyUse(p), f=use?TMPL_FORM[use.form]:null;
   document.getElementById('cy-chips').innerHTML=
     `<span class="chip tag-func">${esc(funcLabel(p.func))}</span>
@@ -1607,7 +1750,9 @@ function cyStepsHtml(){
   const order=cyOrderList(), at=order.indexOf(cyStep);
   return order.map((k,i)=>{
     const no=CY_STEPS.findIndex(s=>s[0]===k)+1, label=(CY_STEPS.find(s=>s[0]===k)||[,''])[1];
-    return `<li class="sc${no} ${i===at?'here':(i<at?'done':'')}"><i>${no}</i>${esc(label)}</li>`;
+    /* STEP2 で切り上げたときは、行わなかったSTEPを薄く出す（どこで終えたかが画面に残る） */
+    const st = i===at ? 'here' : (i<at ? 'done' : (cyShort ? 'skip' : ''));
+    return `<li class="sc${no} ${st}"><i>${no}</i>${esc(label)}</li>`;
   }).join('');
 }
 function cyPlaceHtml(p){
@@ -1671,7 +1816,8 @@ function cyLearnHtml(p){
     ${cyPhraseCardHtml(p)}
     ${cyPlaceHtml(p)}
     <p class="lv-note">${p.mark?'自分でマークした表現です。':'【　】の中は自分の言葉で埋めます。'}<b>声に出して3回</b>言ってから次へ。${next}</p>
-    <div class="btn-row">${cyNextStepBtn('learn')}</div>`;
+    <div class="btn-row">${cyNextStepBtn('learn')}
+      <button onclick="openPhraseEdit('${p.id}','learn')">${p.mark?'このマークを直す':'このフレーズを直す'}</button></div>`;
 }
 /* --- STEP2 / STEP4 英訳チャレンジ --- */
 function cyGoTry(round){ cyStep = round===1?'try1':'try2'; renderCycleStep(); }
@@ -1732,10 +1878,51 @@ function renderCycleTry1Feedback(){
       <button onclick="cyOverride('ng')">言えなかった</button></div>
     <h3>あなたの英語</h3><div class="mono" style="font-size:.9rem;">${esc(L.user)}</div>
     ${recPlaybackHtml()}
-    <p class="lv-note">${cyStepAfter('try1')==='learn'
-      ? '次の <b>STEP1</b> でフレーズの形を確かめ、<b>STEP3</b> で答えの英文を見て音読します。答えを見て終わりにせず、<b>STEP4 でもう一度</b>言うところまで通してください。'
-      : '答えの英文は次の STEP3 で出ます。ここで見比べて終わりにせず、<b>音読してから STEP4 でもう一度</b>言うのがこのコーナーの狙いです。'}</p>
-    <div class="btn-row">${cyNextStepBtn('try1')}</div>`;
+    ${cyAgain ? cyAgainAnswerHtml() : cyReview ? cyAfterTry1ChoiceHtml(L.v)
+      : `<p class="lv-note">答えの英文は次の STEP3 で出ます。ここで見比べて終わりにせず、<b>音読してから STEP4 でもう一度</b>言うのがこのコーナーの狙いです。</p>
+    <div class="btn-row">${cyNextStepBtn('try1')}</div>`}`;
+}
+/* ---- おかわり（2026-08-27 追加） ----
+   1日に回せる件数を上限で削るので、1回の復習を「必ず一度は言えて終わる」形にしておく。
+   言えなかったフレーズを、そのセッションの最後に 英訳1問だけ足す（上限件数には数えない）。
+   ここで言えても箱は動かさない。箱は1回目の答えで確定していて、
+   「今日もう一度言えた」と「日をおいても言える」は別のことだから。 */
+function queueAgainPhrase(p, score){
+  if(score>=0.5) return;
+  if(cySession.some(x=>x._again && x.id===p.id)) return;
+  cySession.push(Object.assign({}, p, {_again:true}));
+}
+/* おかわりの答え合わせ。記録には入れず、答えを見せて次へ送るだけ */
+function cyAgainAnswerHtml(){
+  const p=cyCur(), last=cyIndex===cySession.length-1;
+  return `<h3>答え</h3>
+    <div class="answer-box">
+      <button class="play" onclick="playAudio(this,'${esc(phAudioSrc(p))}')">${ICON_PLAY}</button>
+      ${esc(p.example)}
+      <div class="small">${esc(p.exampleJa)}</div>
+    </div>
+    <div class="tb"><div class="tb-form">使ったフレーズ</div>
+      <div class="ph-en">${esc(p.en)}</div><div class="tb-note">${esc(p.ja)}</div></div>
+    <p class="lv-note">今日のうちにもう一度だけ出しました。<b>この1問は記録に入りません</b>
+      （復習箱は1回目の答えで決まっているので、このフレーズは日を置いてまた出てきます）。</p>
+    <div class="btn-row"><button class="btn-main" onclick="nextCycle()">${last?'結果を見る':'次のフレーズ →'}</button></div>`;
+}
+/* 復習の並びのときだけ、STEP2 のあとに道が2つに分かれる。
+   ・続ける … STEP1 フレーズを確認 → STEP3 音読 → STEP4 再挑戦（今までどおり）
+   ・ここで終わる … 答えを見て次のフレーズへ（finishCycleShort）
+   おすすめのほうを主ボタンにする（言えた＝終わってよい／おしい・要復習＝確認してから もう一度） */
+function cyAfterTry1ChoiceHtml(v){
+  const ok = v==='ok';
+  const note = ok
+    ? '<b>言えています。</b>ここで終わりにして次のフレーズに進んでもかまいません（答えは確認できます）。もう一度 形から確かめたいときは STEP1 へ。'
+    : 'このフレーズは <b>STEP1 で形を確かめ、STEP3 で音読してから STEP4 でもう一度</b>言うところまで通すのがおすすめです。時間がないときはここで終わりにできます。';
+  return `<p class="lv-note">${note}</p>
+    <div class="btn-row">
+      ${ok ? `<button class="btn-main" onclick="finishCycleShort()">ここで終わりにする（答えを見て次へ）</button>
+              ${cyNextStepBtn('try1', false)}`
+           : `${cyNextStepBtn('try1')}
+              <button onclick="finishCycleShort()">ここで終わりにする（答えを見て次へ）</button>`}
+    </div>`;
 }
 /* STEP2 の上書きは記録前なので値を差し替えるだけでよい。
    STEP4 は finishCycleItem で記録済みなので、直前の記録を取り消してから付け直す */
@@ -1792,7 +1979,68 @@ function finishCycleItem(){
   updatePhSrs(p.id, s2);
   markPhSeen(p.id);   /* 解いたフレーズリストに自動でたまる */
   cyResults.push({p, v1:cyTry1.v, v2:cyTry2.v, s1, s2, read:cyRead});
+  if(!cyAgain) queueAgainPhrase(p, s2);
   renderCycleTry2Feedback();
+}
+/* --- STEP2 で切り上げる（復習の並びだけ） ---
+   復習箱は1回目のスコアで進める（進めないと 今日の復習からいつまでも消えない）。
+   累計成績（sc_cycle_*）には入れない ＝ 主指標「1回目 → 2回目の伸び」と定着度を
+   2回目のないぶんで薄めないため。結果画面では 2回目を「—」で出す */
+function finishCycleShort(){
+  if(cyShort) return;                       /* 二重に記録しない */
+  const p=cyCur(), s1=SCORE_OF[cyTry1.v];
+  cyShort=true;
+  cyShortPrevSrs=getPhSrs()[p.id]||null;    /* 自己採点で付け直すときに戻す用 */
+  updatePhSrs(p.id, s1);
+  markPhSeen(p.id);
+  cyResults.push({p, v1:cyTry1.v, v2:null, s1, s2:null, read:0, short:true});
+  if(!cyAgain) queueAgainPhrase(p, s1);
+  /* STEP は動かさない（画面はSTEP2のまま）。行わなかった 1・3・4 はチップを薄くして残す */
+  document.getElementById('cy-steps').innerHTML=cyStepsHtml();
+  document.getElementById('cy-phase').textContent='STEP2 で終わり（答えの確認）';
+  renderCycleShortFeedback();
+}
+/* 切り上げても答えは必ず見せる（機械判定が甘いこともあるので、合っていたかを確かめずに次へ行かせない）。
+   音読の回数もSTEP4もここには置かない ＝「続ける」を選んだときとの違いをはっきりさせる */
+function renderCycleShortFeedback(){
+  const p=cyCur(), L=cyTry1, last=cyIndex===cySession.length-1, [txt,cls]=VERDICT[L.v];
+  document.getElementById('cy-fb').innerHTML=`
+    <div class="verdict ${cls}">${txt}</div>
+    <div class="small">フレーズ: ${L.used?'<span class="res-ok">使えています</span>':'<span class="res-ng">使えていません</span>'}
+      ／ 内容語の再現 ${Math.round(L.recall*100)}% ／ ${L.sec}秒${cyHinted?' ／ ヒントを見て解答':''}</div>
+    <div class="btn-row"><span class="small">答えを見て自己採点で上書き：</span>
+      <button onclick="cyShortOverride('ok')">言えた</button>
+      <button onclick="cyShortOverride('mid')">惜しい</button>
+      <button onclick="cyShortOverride('ng')">言えなかった</button></div>
+    <h3>あなたの英語</h3><div class="mono" style="font-size:.9rem;">${diffHtml(L.ops,'user')||esc(L.user)}</div>
+    ${recPlaybackHtml()}
+    <h3>答え</h3>
+    <div class="answer-box">
+      <button class="play" onclick="playAudio(this,'${esc(phAudioSrc(p))}')">${ICON_PLAY}</button>
+      ${esc(p.example)}
+      <div class="small">${esc(p.exampleJa)}</div>
+    </div>
+    ${phAudioNote(p)}
+    ${(p.alts&&p.alts.length)?`<div class="small">同じ内容の言い換え: ${p.alts.map(esc).join(' ／ ')}</div>`:''}
+    <div class="small" style="margin-top:8px;">言えなかった語（赤）: <span class="mono">${diffHtml(L.ops,'model')}</span></div>
+    <div class="tb"><div class="tb-form">使ったフレーズ</div>
+      <div class="ph-en">${esc(p.en)}</div><div class="tb-note">${esc(p.ja)}</div>
+      ${p.tip?`<div class="tb-note"><b>注意</b><br>${esc(tipText(p.tip))}</div>`:''}</div>
+    <p class="lv-note">この判定（${verdictTag(L.v)}）を<b>今日の復習</b>に記録しました。
+      音読と2回目の英訳をしていないので、<b>累計成績の「1回目 → 2回目」には入りません</b>。</p>
+    <div class="btn-row"><button class="btn-main" onclick="nextCycle()">${last?'結果を見る':'次のフレーズ →'}</button></div>`;
+}
+/* 答えを見てから判定を直す。復習箱は「切り上げる直前の状態」に戻してから付け直す
+   （戻さずに付け直すと、押すたびに箱が1つずつ進んでしまう） */
+function cyShortOverride(nv){
+  const p=cyCur(), s=getPhSrs();
+  if(cyShortPrevSrs) s[p.id]=cyShortPrevSrs; else delete s[p.id];
+  saveJSON(PH_SRS_KEY,s);
+  updatePhSrs(p.id, SCORE_OF[nv]);
+  cyTry1.v=nv;
+  const last=cyResults[cyResults.length-1];
+  if(last){ last.v1=nv; last.s1=SCORE_OF[nv]; }
+  renderCycleShortFeedback();
 }
 function renderCycleTry2Feedback(){
   const p=cyCur(), L=cyTry2, F=cyTry1, [txt,cls]=VERDICT[L.v];
@@ -1833,17 +2081,26 @@ function nextCycle(){
   if(cyIndex>=cySession.length) showCycleResults();
   else renderCycle();
 }
+/* STEP2 で切り上げたぶん（short）は2回目がないので、伸びの計算からは外して件数だけ数える。
+   混ぜて平均すると「1回目 → 2回目の伸び」という主指標が読めなくなる */
 function showCycleResults(){
-  const n=cyResults.length;
-  const p1=cyResults.reduce((a,r)=>a+r.s1,0), p2=cyResults.reduce((a,r)=>a+r.s2,0);
-  const a=Math.round(p1/n*100), b=Math.round(p2/n*100), d=b-a;
-  const msg = d>0 ? '音読が効いています。この伸びぶんがそのまま本番で使える表現になります。'
+  /* 1フレーズあたりに実際どれくらいかかったかを控える（次からの「今日つかう時間 → 件数」の換算に使う） */
+  if(cyMode==='due' && cySesT0 && cyResults.length) pushPace((Date.now()-cySesT0)/1000, cyResults.length);
+  const n=cyResults.length, full=cyResults.filter(r=>!r.short), fn=full.length, sn=n-fn;
+  const a=Math.round(cyResults.reduce((x,r)=>x+r.s1,0)/n*100);
+  const a2=fn?Math.round(full.reduce((x,r)=>x+r.s1,0)/fn*100):0;
+  const b =fn?Math.round(full.reduce((x,r)=>x+r.s2,0)/fn*100):0;
+  const d=b-a2, score=fn?b:a;
+  const msg = !fn ? 'すべて STEP2 で切り上げました。あやしかったフレーズは、日を置いて4ステップ通しで回してください。'
+    : (d>0 ? '音読が効いています。この伸びぶんがそのまま本番で使える表現になります。'
     : (b>=90 ? 'すでに定着しています。お気に入りを付けてマイテンプレに入れておきましょう。'
-             : '2回目で伸びなかったフレーズは、日を置いて解いたフレーズリストからもう一度回してください。');
+             : '2回目で伸びなかったフレーズは、日を置いて解いたフレーズリストからもう一度回してください。'));
   document.getElementById('result-body').innerHTML=`
-    <div class="score">${b}<span> / 100</span></div>
-    ${gradeHtml(b)}
-    <p>実践サイクル ${n}件 ／ 1回目 <b>${a}%</b> → 2回目 <b>${b}%</b>（${d>=0?'+':''}${d} pt）
+    <div class="score">${score}<span> / 100</span></div>
+    ${gradeHtml(score)}
+    <p>実践サイクル ${n}件${sn?`（うち STEP2 で切り上げ ${sn}件）`:''}
+       ／ ${fn?`4ステップ通した ${fn}件は 1回目 <b>${a2}%</b> → 2回目 <b>${b}%</b>（${d>=0?'+':''}${d} pt）`
+             :`1回目 <b>${a}%</b>`}
        ／ 音読 ${cyResults.reduce((x,r)=>x+r.read,0)}回</p>
     <p class="small">${esc(msg)}</p>
     <h3>フレーズ一覧</h3>
@@ -1851,7 +2108,7 @@ function showCycleResults(){
       ${cyResults.map((r,i)=>`<tr><td>${i+1}</td>
         <td class="ph-en">${esc(r.p.en)}</td>
         <td>${verdictTag(r.v1)}</td>
-        <td>${verdictTag(r.v2)}</td></tr>`).join('')}</table>`;
+        <td>${r.short?'<span class="small">— ここで終了</span>':verdictTag(r.v2)}</td></tr>`).join('')}</table>`;
   showScreen('screen-result');
 }
 function retrySame(){ if(lastRun) lastRun(); else showScreen('screen-start'); }
@@ -2335,7 +2592,7 @@ function openPhraseEdit(id, from){
 }
 function phEditReturn(){
   const from=phEditFrom; phEditId=null;
-  if(from==='cycle'){ showScreen('screen-cycle'); renderCycleStep(); return; }
+  if(from==='cycle'||from==='learn'){ showScreen('screen-cycle'); renderCycleStep(); return; }
   if(from==='dojo'){ showScreen('screen-phrase'); renderPhraseFeedback(); return; }
   if(from==='trash'){ openPhraseTrash(); return; }
   openPhraseList();
@@ -2350,22 +2607,39 @@ function phField(id, label, val, rows, note){
   return `<div style="margin:18px 0;"><div class="small"><b>${esc(label)}</b>${note?` — ${note}`:''}</div>
     <textarea id="${id}" rows="${rows}" style="font-size:.95rem;">${esc(val)}</textarea></div>`;
 }
+/* STEP1 から開いた編集は「その画面に出ている項目」だけにする。
+   例文（example）・その和訳・言い換え・採点の核をここに出すと、STEP2 の答えを先に渡すことになり、
+   STEP1・STEP2 で答えの英文を出さないという実践サイクルの生命線が崩れる。
+   例文まわりを直したくなったら STEP3（答えを見て音読）の「このフレーズを直す」から入る */
+function phEditIsLearn(){ return phEditFrom==='learn'; }
+function phEditLearnNote(){
+  return `<p class="small">STEP1 に出ている項目だけを直せます。
+    <b>例文・その和訳・言い換え・採点の核・削除</b>は、答えを見たあと（<b>STEP3</b>）の
+    「このフレーズを直す」か、フレーズ一覧から直してください
+    （ここに出すと STEP2 の答えが先に見えてしまうため）。</p>`;
+}
 function renderPhraseEdit(){
   const p=PH_BY_ID[phEditId];
   const el=document.getElementById('phedit-body');
   if(!p){ el.innerHTML='<div class="card"><p class="small">フレーズが見つかりません。</p></div>'; return; }
+  const learn=phEditIsLearn();
   if(p.mark){
+    /* マークの範囲は「元の文の中に出てくる形」でしか保存できない。その元の文を STEP1 では出せないので、
+       STEP1 から開いたときは範囲を触らせず、メモだけにする */
     el.innerHTML=`<div class="card">
       <p class="small"><b>${esc(markTopicTitle(p))}</b> の模範解答からマークした表現です。
-        マークした範囲とメモだけを直せます（型 ▸ ブロックは清書のときに付きます）。</p>
+        ${learn?'STEP1 に出ているメモだけを直せます（マークした範囲は元の文と照らして直すので STEP3 から）。'
+               :'マークした範囲とメモだけを直せます（型 ▸ ブロックは清書のときに付きます）。'}</p>
+      ${learn?`<div class="small">マークした表現: ${esc(p.en)}</div>`:`
       <div class="small">元の文: ${esc(p.example)}</div>
       <div class="small">その和訳: ${esc(p.exampleJa)}</div>
-      ${phField('pe-en','マークした表現',p.en,2,'この文の中に出てくる形にしてください（STEP2・STEP4 の判定に使います）')}
+      ${phField('pe-en','マークした表現',p.en,2,'この文の中に出てくる形にしてください（STEP2・STEP4 の判定に使います）')}`}
       ${phField('pe-note','メモ（意味・使いどころ）',p.note||'',3,'STEP1 の画面に出ます')}
+      ${learn?phEditLearnNote():''}
       <div class="btn-row">
         <button class="btn-main" onclick="phEditSave()">保存する</button>
         <button onclick="phEditReturn()">やめる</button>
-        <button onclick="phDelete('${p.id}','${phEditFrom}')">このマークを消す</button>
+        ${learn?'':`<button onclick="phDelete('${p.id}','${phEditFrom}')">このマークを消す</button>`}
       </div></div>`;
     return;
   }
@@ -2379,17 +2653,17 @@ function renderPhraseEdit(){
     ${phField('pe-en','フレーズの型（en）',p.en,2,'【　】は学習者が自分で埋める部分です')}
     ${phField('pe-ja','意味（ja）',p.ja,2,'STEP1 で出ます')}
     ${phField('pe-shape','続く形（shape）',p.shape||'',1,'例: SV / 名 / -ing。空でもかまいません')}
-    ${phField('pe-answers','採点の核（answers）',answersToText(p.answers),3,
+    ${learn?'':`${phField('pe-answers','採点の核（answers）',answersToText(p.answers),3,
       '1行が1候補。可変部を挟むときは <span class="mono">/</span> で区切ります（例: <span class="mono">I prefer / rather than</span>）')}
     ${phField('pe-example','例文（example）',p.example,3,'STEP3 で見せる答え。上の「核」を語順どおり含めてください')}
-    ${phField('pe-exampleJa','例文の和訳（exampleJa）',p.exampleJa,3,'STEP2 の出題文そのもの。これだけで英語を組み立てられる粒度で')}
+    ${phField('pe-exampleJa','例文の和訳（exampleJa）',p.exampleJa,3,'STEP2 の出題文そのもの。これだけで英語を組み立てられる粒度で')}`}
     ${phField('pe-tip','注意（tip）',p.tip||'',3,'STEP1 で出ます。<b>例文の【　】の中身は書かない</b>でください（STEP2 の答えを先に渡すことになります）')}
-    ${phField('pe-alts','言い換え（alts）',(p.alts||[]).join('\n'),3,'1行1つ。STEP3 以降でしか出ません')}
+    ${learn?phEditLearnNote():phField('pe-alts','言い換え（alts）',(p.alts||[]).join('\n'),3,'1行1つ。STEP3 以降でしか出ません')}
     <div class="btn-row">
       <button class="btn-main" onclick="phEditSave()">保存する</button>
       <button onclick="phEditReturn()">やめる</button>
-      ${p.editLocal?`<button onclick="phEditRevert()">この編集を取り消す</button>`:''}
-      <button onclick="phDelete('${p.id}','${phEditFrom}')">このフレーズを削除</button>
+      ${(!learn&&p.editLocal)?`<button onclick="phEditRevert()">この編集を取り消す</button>`:''}
+      ${learn?'':`<button onclick="phDelete('${p.id}','${phEditFrom}')">このフレーズを削除</button>`}
     </div>
     <div id="pe-msg" class="small"></div>
   </div>`;
@@ -2397,6 +2671,7 @@ function renderPhraseEdit(){
 function phEditSave(){
   const p=PH_BY_ID[phEditId]; if(!p) return;
   if(p.mark) return phEditSaveMark(p);
+  if(phEditIsLearn()) return phEditSaveLearn(p);
   const f={ en:phEditVal('pe-en'), ja:phEditVal('pe-ja'), shape:phEditVal('pe-shape'),
             example:phEditVal('pe-example'), exampleJa:phEditVal('pe-exampleJa'),
             tip:phEditVal('pe-tip'), alts:phLines(phEditVal('pe-alts')),
@@ -2413,8 +2688,22 @@ function phEditSave(){
   phSaveEdit(p.id, f, stale);
   phEditReturn();
 }
+/* STEP1 から直したぶんの保存。画面に出していない項目は「いまの値」をそのまま持ち回る。
+   phSaveEdit は f を丸ごと上書き保存するので、ここで詰め直さないと
+   前に直した例文・言い換え・採点の核が消える（example と answers は触っていないので照合は要らない） */
+function phEditSaveLearn(p){
+  const f={ en:phEditVal('pe-en'), ja:phEditVal('pe-ja'), shape:phEditVal('pe-shape'),
+            tip:phEditVal('pe-tip'),
+            example:p.example, exampleJa:p.exampleJa,
+            alts:(p.alts||[]).slice(), answers:p.answers };
+  const need=[['en','フレーズの型'],['ja','意味']];
+  for(const [k,label] of need){ if(!f[k]){ alert(label+'は空にできません。'); return; } }
+  phSaveEdit(p.id, f, !!p.audioStale);
+  phEditReturn();
+}
 function phEditSaveMark(p){
-  const text=phEditVal('pe-en'), note=phEditVal('pe-note');
+  /* STEP1 から開いたときはメモだけ（範囲は元の文と照らして直すので STEP3 から） */
+  const text=phEditIsLearn()?p.en:phEditVal('pe-en'), note=phEditVal('pe-note');
   if(!text){ alert('マークした表現は空にできません。'); return; }
   if(!chunksInOrder(tokenize(p.example),[text])){
     alert('マークした表現が元の文の中に見つかりません。\n元の文に出てくるとおりに書いてください（STEP2・STEP4 の判定に使います）。');
@@ -2541,9 +2830,11 @@ function startDailyDrill(n, all){
    「ここまでの何件が学習ずみとして残るか」を必ず件数で言い切る */
 function confirmBackFromCycle(){
   const done=cyResults.length, rest=cySession.length-done;
+  const sn=cyResults.filter(r=>r.short).length;   /* STEP2 で切り上げたぶんも学習ずみとして残る */
   const msg = done
-    ? `中断してスタート画面に戻ります。\n\nここまで STEP4 まで終えた ${done}件は学習ずみとして残ります（解いたフレーズリストと今日の復習に入ります）。\n残り ${rest}件は、次に同じボタンを押したときに続きから出ます。`
-    : `中断してスタート画面に戻ります。\n\nまだ STEP4 の答え合わせが1件も済んでいないので、学習ずみにはなりません（次も同じフレーズから始まります）。`;
+    ? `中断してスタート画面に戻ります。\n\nここまで答え合わせを終えた ${done}件は学習ずみとして残ります（解いたフレーズリストと今日の復習に入ります）。${
+        sn?`\nうち ${sn}件は STEP2 で切り上げたぶんです。`:''}\n残り ${rest}件は、次に同じボタンを押したときに続きから出ます。`
+    : `中断してスタート画面に戻ります。\n\nまだ答え合わせが1件も済んでいないので、学習ずみにはなりません（次も同じフレーズから始まります）。`;
   if(confirm(msg)) showScreen('screen-start');
 }
 function confirmBackFromDrill(){
@@ -2604,11 +2895,17 @@ const SH_CAPS=[['none','音声のみ'],['ja','日本語字幕'],['en','英語字
 const SH_AFTER=[['stop','終わったら停止'],['repeat','このテーマをリピート'],['next','次のテーマへ自動再生']];
 const SH_NEXTVER=[['random','バージョンはランダム'],['high','模範解答のみ'],['qa','別解のみ']];
 const SH_SPEEDS=['0.6','0.7','0.75','0.8','0.9','1','1.25'];
+/* 読み上げの並び。ja2en は解答文だけ「日本語1回 → 英語2回」で流す（質問文は英語のまま1回）。 */
+const SH_READS=[['en','英語だけ'],['ja2en','日本語1回 → 英語2回']];
+const SH_LEG_LABEL={ja:'日本語', en1:'英語 1回目', en2:'英語 2回目'};
 
-let shCfg=Object.assign({topic:null,version:null,cap:'both',speed:'1',after:'stop',nextver:'random',loop:false},
+let shCfg=Object.assign({topic:null,version:null,cap:'both',speed:'1',read:'en',
+                         after:'stop',nextver:'random',loop:false},
                         loadJSON(SH_CFG_KEY,{}));
 if(!SHADOW_TOPICS[shCfg.topic]) { shCfg.topic=SH_IDS[0]||null; shCfg.version=null; }
-let shSegs=[], shIdx=-1, shPlaying=false, shOnce=false, shAudio=null;
+if(!SH_READS.some(r=>r[0]===shCfg.read)) shCfg.read='en';
+/* shLeg = いま鳴らしている読み上げ（'ja' / 'en1' / 'en2'）。英語だけのときは常に 'en1'。 */
+let shSegs=[], shIdx=-1, shLeg='en1', shPlaying=false, shOnce=false, shAudio=null;
 
 function shSave(){ saveJSON(SH_CFG_KEY, shCfg); }
 function shTopic(){ return SHADOW_TOPICS[shCfg.topic]||null; }
@@ -2749,6 +3046,7 @@ function shSetVersion(vid){
 }
 function shLoad(idx){
   shStop();
+  mkSel=null;   // 開きっぱなしのマークは別のトピックの文に付いてしまうので閉じる
   shSegs=shBuild(shCfg.topic, shCfg.version);
   shIdx=(typeof idx==='number' && idx>=0 && idx<shSegs.length) ? idx : -1;
   shRenderHeader(); shRenderControls(); shRenderStage(); shRenderTranscript();
@@ -2779,7 +3077,11 @@ function shRenderControls(){
     + SH_SPEEDS.map(s=>`<option value="${s}"${s===shCfg.speed?' selected':''}>${s==='1'?'1.0':s}x</option>`).join('')
     +`</select>`
     +`<span class="small" id="sh-progress">${shIdx>=0?shIdx+1:0} / ${shSegs.length}</span>`
-    +`<span class="small">（速度は解答文だけに効きます。質問は常に等速）</span>`;
+    +`<span class="small">（速度は解答文の英語だけに効きます。質問文と日本語は常に等速）</span>`;
+  document.getElementById('sh-read').innerHTML=chipsHtml(SH_READS, shCfg.read, 'shSetRead')
+    +`<span class="small">${shCfg.read==='ja2en'
+        ? '解答文は 和訳を1回 → 同じ文の英語を2回。質問文は英語のまま1回です。'
+        : '解答文も質問文も英語を1回ずつ流します。'}</span>`;
   document.getElementById('sh-playmode').innerHTML=
     `<span class="chip ${shCfg.loop?'on':''}" onclick="shToggleLoop()">この文をリピート再生</span>`;
   document.getElementById('sh-after').innerHTML=chipsHtml(SH_AFTER, shCfg.after, 'shSetAfter');
@@ -2793,13 +3095,18 @@ function shRenderStage(){
   }else{
     const s=shSegs[shIdx];
     let h=`<div class="sh-tag ${s.speaker}">${s.speaker==='Q'?'面接官 (Question)':'解答者 (Answer)'}</div>`;
+    const legs=shLegs(s);
+    if(legs.length>1) h+=`<div class="sh-legs">`
+      + legs.map(g=>`<span class="sh-leg ${g===shLeg?'on':''}">${SH_LEG_LABEL[g]}</span>`).join('')
+      + `</div>`;
     if(shCfg.cap==='en'||shCfg.cap==='both') h+=`<div class="sh-en">${esc(s.en)}</div>`;
     if(shCfg.cap==='ja'||shCfg.cap==='both') h+=`<div class="sh-ja">${esc(s.ja)}</div>`;
     if(shCfg.cap==='none') h+=`<div class="sh-hint">音声のみモードで再生中…</div>`;
     const hit=(shHits().bySeg[shCfg.topic+'/'+s.id]||[]);
     const mk=mkOfSeg(s.id);
     if(hit.length||mk.length) h+=`<div>${hit.map(shHitChip).join('')}${mk.map(mkChip).join('')}</div>`;
-    h+=`<div><button class="mk-btn" onclick="shMarkOpen(event,${shIdx})">この文から表現をマーク</button></div>`;
+    h+=`<div><button class="mk-btn" onclick="shMarkOpen(event,${shIdx},'stage')">この文から表現をマーク</button></div>`;
+    h+=markPanelHtml('stage', shIdx);   // マークはこの文のすぐ下に開く
     el.innerHTML=h;
   }
   const pg=document.getElementById('sh-progress');
@@ -2816,7 +3123,8 @@ function shRenderTranscript(){
       +(showJa?`<div class="sh-ja">${esc(s.ja)}</div>`:'')
       +((!showEn&&!showJa)?`<div class="sh-ja">字幕オフ（${i+1}文目）</div>`:'')
       +((hit.length||mk.length)?`<div>${hit.map(shHitChip).join('')}${mk.map(mkChip).join('')}</div>`:'')
-      +`</div><button class="mk-btn" onclick="shMarkOpen(event,${i})" title="気になった表現をマーク">マーク</button></div>`;
+      +markPanelHtml('script', i)   // マークはこのセリフのすぐ下に開く
+      +`</div><button class="mk-btn" onclick="shMarkOpen(event,${i},'script')" title="気になった表現をマーク">マーク</button></div>`;
   }).join('');
 }
 function shScrollTo(i){
@@ -2829,27 +3137,55 @@ function shAudioEl(){
   if(!shAudio){
     shAudio=new Audio();
     shAudio.onended=shOnEnded;
-    shAudio.onerror=()=>{ shPlaying=false; shSyncPlayBtn(); };
+    shAudio.onerror=()=>{
+      // 日本語の音がまだ無い文は、その文の英語からそのまま続ける（並びのせいで止まらないように）
+      if(shLeg==='ja'){ shPlayLeg('en1'); return; }
+      shPlaying=false; shSyncPlayBtn();
+    };
   }
   return shAudio;
 }
-function shRate(s){ return s.speaker==='Q' ? 1 : (parseFloat(shCfg.speed)||1); }
+/* その文で鳴らす順番。解答文だけ 日本語 → 英語 → 英語、質問文は今まで通り英語1回。 */
+function shLegs(s){
+  return (shCfg.read==='ja2en' && s && s.speaker==='A') ? ['ja','en1','en2'] : ['en1'];
+}
+function shSrc(s, leg){
+  return leg==='ja' ? `audio_shadow_ja/${shCfg.topic}/${s.id}.mp3`
+                    : `audio_shadow/${shCfg.topic}/${s.id}.mp3`;
+}
+/* 速度は解答文の英語にだけ効く。質問文と日本語は常に等速。 */
+function shRate(s, leg){
+  if(leg==='ja' || !s || s.speaker==='Q') return 1;
+  return parseFloat(shCfg.speed)||1;
+}
 function shSyncPlayBtn(){ const b=document.getElementById('sh-play'); if(b) b.innerHTML=shPlaying?ICON_PAUSE:ICON_BIGPLAY; }
+/* いまの文の1つの読み上げを鳴らす（文は動かさないので、スクリプト全文は描き直さない） */
+function shPlayLeg(leg){
+  const s=shSegs[shIdx]; if(!s) return;
+  const a=shAudioEl();
+  shLeg=leg;
+  a.src=shSrc(s, leg);
+  a.playbackRate=shRate(s, leg);
+  a.play();
+  shPlaying=true;
+  shRenderStage(); shSyncPlayBtn();
+}
 function shPlay(i){
   if(i<0 || i>=shSegs.length){ shStop(); return; }
   // 便利フレーズの再生ボタンと音がかぶらないように、そちらは止める
   if(currentAudio){ currentAudio.pause(); currentAudio=null; }
   if(currentBtn){ resetPlayBtn(currentBtn); currentBtn=null; }
+  // 今の文の下に開いているマークは、その文が変わったら閉じる（別の文の下に居残らせない）
+  if(mkSel && mkSel.where==='stage' && mkSel.i!==i) mkSel=null;
   shIdx=i;
-  const s=shSegs[i], a=shAudioEl();
-  a.src=`audio_shadow/${shCfg.topic}/${s.id}.mp3`;
-  a.playbackRate=shRate(s);
-  a.play();
-  shPlaying=true;
-  shRenderStage(); shRenderTranscript(); shSyncPlayBtn(); shScrollTo(i);
+  shPlayLeg(shLegs(shSegs[i])[0]);
+  shRenderTranscript(); shScrollTo(i);
 }
 function shOnEnded(){
   if(shOnce){ shOnce=false; shPlay(shIdx); return; }
+  // 同じ文にまだ読み上げが残っていれば（日本語のあとの英語1回目・2回目）そちらへ
+  const legs=shLegs(shSegs[shIdx]), k=legs.indexOf(shLeg);
+  if(k>=0 && k+1<legs.length){ shPlayLeg(legs[k+1]); return; }
   if(shCfg.loop){ shPlay(shIdx); return; }
   if(shIdx+1<shSegs.length){ shPlay(shIdx+1); return; }
   if(shCfg.after==='repeat'){ shPlay(0); return; }
@@ -2864,6 +3200,7 @@ function shNextTopic(){
     ? vids[Math.floor(Math.random()*vids.length)]
     : (vids.includes(shCfg.nextver) ? shCfg.nextver : vids[0]);
   shSave();
+  mkSel=null;   // 別のトピックに移るので開きっぱなしのマークは閉じる
   shSegs=shBuild(shCfg.topic, shCfg.version); shIdx=-1;
   shRenderHeader(); shRenderTranscript();
   shPlay(0);
@@ -2872,9 +3209,11 @@ function shStop(){
   if(shAudio){ shAudio.pause(); shAudio.currentTime=0; }
   shPlaying=false; shOnce=false; shSyncPlayBtn();
 }
+/* 今の読み上げの途中で止める（▶ を押せば続きから鳴る） */
+function shPause(){ if(shAudio) shAudio.pause(); shPlaying=false; shSyncPlayBtn(); }
 function shToggle(){
   if(!shSegs.length) return;
-  if(shPlaying){ if(shAudio) shAudio.pause(); shPlaying=false; shSyncPlayBtn(); return; }
+  if(shPlaying){ shPause(); return; }
   if(shIdx<0){ shPlay(0); return; }
   shAudioEl().play(); shPlaying=true; shSyncPlayBtn();
 }
@@ -2884,7 +3223,15 @@ function shRepeat(){ if(shIdx>=0) shPlay(shIdx); }
 function shSetCap(m){ shCfg.cap=m; shSave(); shRenderControls(); shRenderStage(); shRenderTranscript(); }
 function shSetSpeed(v){
   shCfg.speed=v; shSave();
-  if(shAudio && shIdx>=0 && shSegs[shIdx]) shAudio.playbackRate=shRate(shSegs[shIdx]);
+  if(shAudio && shIdx>=0 && shSegs[shIdx]) shAudio.playbackRate=shRate(shSegs[shIdx], shLeg);
+}
+/* 読み上げの並びを切り替える。鳴っている途中なら、その文の頭から新しい並びで鳴らし直す。 */
+function shSetRead(m){
+  if(shCfg.read===m) return;
+  shCfg.read=m; shSave();
+  shRenderControls();
+  if(shIdx>=0 && shPlaying) shPlay(shIdx);
+  else shRenderStage();
 }
 function shSetAfter(m){ shCfg.after=m; shSave(); shRenderControls(); }
 function shSetNextVer(m){ shCfg.nextver=m; shSave(); shRenderControls(); }
@@ -2969,17 +3316,25 @@ function markOriginLinkHtml(p, ask){
     +`${esc(markTopicTitle(p))}</a> の模範解答</div>`;
 }
 /* --- シャドーイング画面でのマーク作成 --- */
-let mkSel=null;   // {i, a, b, note}
+/* パネルは「押したセリフのすぐ下」に開く。where はどちらの並びで押したか
+   （'stage' = 今の文／'script' = スクリプト全文）で、同じ文でも押した側にだけ出す。 */
+let mkSel=null;   // {i, where, a, b, note}
 function mkOfSeg(segId){ return getMarks().filter(m=>m.t===shCfg.topic && m.seg===segId); }
 function mkChip(m){
   return `<span class="mk-tag" onclick="mkChipClick(event,'${esc(m.id)}')" title="実践サイクルで回す">マーク: ${esc(m.text)} → 実践サイクル</span>`;
 }
 function mkChipClick(ev,id){ if(ev&&ev.stopPropagation) ev.stopPropagation(); startCycleOne(id); }
 function mkWords(s){ return String(s||'').split(/\s+/).filter(Boolean); }
-function shMarkOpen(ev,i){
+function shMarkOpen(ev,i,where){
   if(ev&&ev.stopPropagation) ev.stopPropagation();
   if(i<0||i>=shSegs.length){ alert('先に文を選んでください（スクリプト全文の「マーク」からも選べます）。'); return; }
-  mkSel={i, a:null, b:null, note:''};
+  where=where||'script';
+  // 同じセリフの同じ「マーク」をもう一度押したら閉じる
+  if(mkSel && mkSel.i===i && mkSel.where===where){ shMarkClose(); return; }
+  // パネルはセリフの中に描くので、鳴らしたまま次の文へ進むとメモの入力が消えてしまう。
+  // マークは手を止めて選ぶ作業なので、開いたらいったん止める（▶ で続きから鳴る）。
+  shPause();
+  mkSel={i, where, a:null, b:null, note:''};
   renderMarkPanel();
 }
 function shMarkClose(){ mkSel=null; renderMarkPanel(); }
@@ -3003,16 +3358,18 @@ function mkExisting(text){
     return cs.length===1 && normalizeText(cs[0])===key;
   })) || null;
 }
-function renderMarkPanel(){
-  const el=document.getElementById('sh-mark');
-  if(!mkSel){ el.classList.add('hidden'); el.innerHTML=''; return; }
-  el.classList.remove('hidden');
-  const s=shSegs[mkSel.i], r=mkRange(), text=mkText(), dup=text?mkExisting(text):null;
+/* セリフ（where 側の i 番目）の下に差し込むパネル。開いていない場所では空文字を返す。
+   スクリプト全文の行は行ごと onclick で再生に入るので、パネルの中のタップは行に渡さない。 */
+function markPanelHtml(where, i){
+  if(!mkSel || mkSel.i!==i || mkSel.where!==where) return '';
+  const s=shSegs[mkSel.i]; if(!s) return '';
+  const r=mkRange(), text=mkText(), dup=text?mkExisting(text):null;
   const words=mkWords(s.en).map((w,k)=>{
     const on=r&&k>=r[0]&&k<=r[1], edge=r&&(k===r[0]||k===r[1]);
     return `<span class="mk-w${on?' on':''}${edge?' edge':''}" onclick="mkTapWord(${k})">${esc(w)}</span>`;
   }).join('');
-  el.innerHTML=`<h2><span class="ic">🌱</span>気になった表現をマークする</h2>
+  return `<div class="mk-inline" onclick="event.stopPropagation()">
+    <div class="mk-head"><span class="ic">🌱</span>気になった表現をマークする</div>
     <p class="small">単語をタップして<b>始まり</b>→<b>終わり</b>を選びます（1語だけなら同じ語をもう一度タップ）。
       2語以上を選ぶと、実践サイクルの判定がちょうどよくなります。</p>
     <div class="mk-words">${words}</div>
@@ -3026,8 +3383,10 @@ function renderMarkPanel(){
       <button class="btn-main" ${text?'':'disabled'} onclick="mkSave()">マークする</button>
       <button ${text?'':'disabled'} onclick="mkSave(true)">マークして実践サイクルへ</button>
       <button onclick="shMarkClose()">閉じる</button>
-    </div>`;
+    </div></div>`;
 }
+/* パネルはセリフの中に描かれるので、開閉・選び直しはそのセリフを描き直すだけでよい */
+function renderMarkPanel(){ shRenderStage(); shRenderTranscript(); }
 function mkSave(go){
   if(!mkSel) return;
   const text=mkText(); if(!text){ alert('マークする範囲を選んでください。'); return; }
@@ -3036,7 +3395,7 @@ function mkSave(go){
             en:s.en, ja:s.ja, text, note:(mkSel.note||'').trim(), date:localToday() };
   saveMarks(getMarks().concat([m]));
   mkSel=null;
-  renderMarkPanel(); shRenderStage(); shRenderTranscript();
+  renderMarkPanel();
   if(go) startCycleOne(m.id);
 }
 /* --- マーク一覧 --- */
